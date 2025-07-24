@@ -19,7 +19,7 @@ fi
 ip=$(ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$/\1/p')
 
 if [[ -z $LE_HOSTNAME ]]; then
-    echo_query "Enter domain name to secure with LE"
+    echo_query "Enter base domain name to secure with LE"
     read -e hostname
 else
     hostname=$LE_HOSTNAME
@@ -36,7 +36,7 @@ else
 fi
 
 if [[ $main == yes ]]; then
-    sed -i "s/server_name .*;/server_name $hostname;/g" /etc/nginx/sites-enabled/default
+    sed -i "s/server_name .*;/server_name $hostname *.$hostname;/g" /etc/nginx/sites-enabled/default
 fi
 
 if [[ -n $LE_CF_API ]] || [[ -n $LE_CF_EMAIL ]] || [[ -n $LE_CF_ZONE ]]; then
@@ -119,6 +119,15 @@ if [[ ${cf} == yes ]]; then
             message="DNS record added for $hostname at $ip"
             echo_info "$message"
         fi
+        addrecord=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$zoneid/dns_records" -H "X-Auth-Email: $email" -H "X-Auth-Key: $api" -H "Content-Type: application/json" --data "{\"id\":\"$zoneid\",\"type\":\"A\",\"name\":\"*.$hostname\",\"content\":\"$ip\",\"proxied\":true}")
+        if [[ $addrecord == *"\"success\":false"* ]]; then
+            message="API UPDATE FAILED. DUMPING RESULTS:\n$addrecord"
+            echo_error "$message"
+            exit 1
+        else
+            message="DNS record added for *.$hostname at $ip"
+            echo_info "$message"
+        fi
     fi
 fi
 
@@ -148,19 +157,19 @@ chmod 700 /etc/nginx/ssl
 
 echo_progress_start "Registering certificates"
 if [[ ${cf} == yes ]]; then
-    /root/.acme.sh/acme.sh --force --issue --dns dns_cf -d ${hostname} >> $log 2>&1 || {
+    /root/.acme.sh/acme.sh --force --issue --dns dns_cf -d ${hostname} -d "*.${hostname}" >> $log 2>&1 || {
         echo_error "Certificate could not be issued."
         exit 1
     }
 else
     if [[ $main = yes ]]; then
-        /root/.acme.sh/acme.sh --force --issue --nginx -d ${hostname} >> $log 2>&1 || {
+        /root/.acme.sh/acme.sh --force --issue --nginx -d ${hostname} -d "*.${hostname}" >> $log 2>&1 || {
             echo_error "Certificate could not be issued."
             exit 1
         }
     else
         systemctl stop nginx
-        /root/.acme.sh/acme.sh --force --issue --standalone -d ${hostname} --pre-hook "systemctl stop nginx" --post-hook "systemctl start nginx" >> $log 2>&1 || {
+        /root/.acme.sh/acme.sh --force --issue --standalone -d ${hostname} -d "*.${hostname}" --pre-hook "systemctl stop nginx" --post-hook "systemctl start nginx" >> $log 2>&1 || {
             echo_error "Certificate could not be issued. Please check your info and try again"
             exit 1
         }
@@ -171,7 +180,7 @@ fi
 echo_progress_done "Certificate acquired"
 
 echo_progress_start "Installing certificate"
-/root/.acme.sh/acme.sh --force --install-cert -d ${hostname} --key-file /etc/nginx/ssl/${hostname}/key.pem --fullchain-file /etc/nginx/ssl/${hostname}/fullchain.pem --ca-file /etc/nginx/ssl/${hostname}/chain.pem --reloadcmd "systemctl reload nginx"
+/root/.acme.sh/acme.sh --force --install-cert -d ${hostname} -d "*.${hostname}" --key-file /etc/nginx/ssl/${hostname}/key.pem --fullchain-file /etc/nginx/ssl/${hostname}/fullchain.pem --ca-file /etc/nginx/ssl/${hostname}/chain.pem --reloadcmd "systemctl reload nginx"
 if [[ $main == yes ]]; then
     sed -i "s/ssl_certificate .*/ssl_certificate \/etc\/nginx\/ssl\/${hostname}\/fullchain.pem;/g" /etc/nginx/sites-enabled/default
     sed -i "s/ssl_certificate_key .*/ssl_certificate_key \/etc\/nginx\/ssl\/${hostname}\/key.pem;/g" /etc/nginx/sites-enabled/default
