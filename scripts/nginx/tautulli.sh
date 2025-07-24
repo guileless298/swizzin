@@ -16,17 +16,16 @@ fi
 if [[ ! -f /etc/nginx/apps/tautulli.conf ]]; then
     cat > /etc/nginx/apps/tautulli.conf << RAD
 location /plexpy {
-  return 301 /tautulli/;
+  return 301 \$scheme://tautulli.\$maindomain\$request_uri;
 }
-
 
 location /tautulli {
   include /etc/nginx/snippets/proxy.conf;
-  proxy_pass        http://127.0.0.1:8181/tautulli;
+  proxy_pass        http://127.0.0.1:8181\$request_uri;
 }
 RAD
 fi
-sed -i "s/http_root.*/http_root = \"tautulli\"/g" /opt/tautulli/config.ini
+#sed -i "s/http_root.*/http_root = \"tautulli\"/g" /opt/tautulli/config.ini
 sed -i "s/http_host.*/http_host = 127.0.0.1/g" /opt/tautulli/config.ini
 if [[ $isactive == "active" ]]; then
     systemctl start tautulli

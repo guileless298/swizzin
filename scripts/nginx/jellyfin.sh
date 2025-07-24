@@ -3,7 +3,7 @@
 # A functions for reused commands.
 function reused_commands() {
     sed -iE 's|<LocalNetworkAddresses />|<LocalNetworkAddresses>\n    <string>127.0.0.1</string>\n  </LocalNetworkAddresses>|g' -i /etc/jellyfin/network.xml
-    sed -r 's#<BaseUrl />#<BaseUrl>/jellyfin</BaseUrl>#g' -i /etc/jellyfin/network.xml
+    #sed -r 's#<BaseUrl />#<BaseUrl>/jellyfin</BaseUrl>#g' -i /etc/jellyfin/network.xml
 }
 #
 # Do this for jellyfin if is not already installed
@@ -23,7 +23,7 @@ fi
 # Create our nginx application conf for jellyfin
 cat > /etc/nginx/apps/jellyfin.conf <<- NGINXCONF
 	location /jellyfin {
-		proxy_pass https://127.0.0.1:8920;
+		proxy_pass https://127.0.0.1:8920\$request_uri;
 		#
 		proxy_pass_request_headers on;
 		#

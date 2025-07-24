@@ -14,7 +14,7 @@ location /qbittorrent.downloads {
 
   location ~* \.php\$ {
 
-  } 
+  }
 }
 DIN
 fi
@@ -22,19 +22,16 @@ fi
 if [[ ! -f /etc/nginx/apps/qbittorrent.conf ]]; then
     cat > /etc/nginx/apps/qbittorrent.conf << 'QBTN'
 location /qbt {
-    return 301 /qbittorrent/;
+  return 301 \$scheme://qbittorrent.\$maindomain\$request_uri;
 }
 
 location /qbittorrent/ {
-    proxy_pass              http://$remote_user.qbittorrent;
+    proxy_pass              http://$remote_user.qbittorrent\$request_uri;
     proxy_http_version      1.1;
     proxy_set_header        X-Forwarded-Host        $http_host;
     http2_push_preload on; # Enable http2 push
-    auth_basic "What's the password?";
-
-    auth_basic_user_file /etc/htpasswd;
-    rewrite ^/qbittorrent/(.*) /$1 break;
-    proxy_cookie_path / "/qbittorrent/; Secure";
+#    auth_basic "What's the password?";
+#    auth_basic_user_file /etc/htpasswd;
 
     # The following directives effectively nullify Cross-site request forgery (CSRF)
     # protection mechanism in qBittorrent, only use them when you encountered connection problems.

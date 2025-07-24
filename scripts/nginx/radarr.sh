@@ -13,13 +13,13 @@ user="$RADARR_OWNER"
 app_port="7878"
 app_sslport="9898"
 app_configdir="/home/$user/.config/${app_name^}"
-app_baseurl="$app_name"
+app_subdomain="$app_name"
 app_servicefile="${app_name}.service"
 app_branch="master"
 
 cat > /etc/nginx/apps/$app_name.conf << ARRNGINX
-location ^~ /$app_baseurl {
-    proxy_pass http://127.0.0.1:$app_port;
+location ^~ /$app_subdomain {
+    proxy_pass http://127.0.0.1:$app_port\$request_uri;
     proxy_set_header Host \$host;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Host \$host;
@@ -28,23 +28,23 @@ location ^~ /$app_baseurl {
     proxy_http_version 1.1;
     proxy_set_header Upgrade \$http_upgrade;
     proxy_set_header Connection \$http_connection;
-    
-    auth_basic "What's the password?";
-    auth_basic_user_file /etc/htpasswd.d/htpasswd.${master};
+
+#    auth_basic "What's the password?";
+#    auth_basic_user_file /etc/htpasswd.d/htpasswd.${master};
 }
 
 # Allow the API External Access via NGINX
 
-location ^~ /$app_baseurl/api {
+location ^~ /$app_subdomain/api {
     auth_basic off;
-    proxy_pass http://127.0.0.1:$app_port;
+    proxy_pass http://127.0.0.1:$app_port\$request_uri;
 }
 
 # Allow Calendar Feed External Access via NGINX
 
-location ^~ /$app_baseurl/feed/calendar {
+location ^~ /$app_subdomain/feed/calendar {
     auth_basic off;
-    proxy_pass http://127.0.0.1:$app_port;
+    proxy_pass http://127.0.0.1:$app_port\$request_uri;
 }
 
 ARRNGINX
@@ -57,6 +57,7 @@ if [[ $wasActive == "active" ]]; then
 fi
 
 apikey=$(grep -oPm1 "(?<=<ApiKey>)[^<]+" "$app_configdir"/config.xml)
+urlBase=$(grep -oPm1 "(?<=<UrlBase>)[^<]+" "$app_configdir"/config.xml)
 
 cat > "$app_configdir"/config.xml << ARRCONFIG
 <Config>
@@ -69,7 +70,7 @@ cat > "$app_configdir"/config.xml << ARRCONFIG
   <LaunchBrowser>False</LaunchBrowser>
   <ApiKey>${apikey}</ApiKey>
   <AuthenticationMethod>None</AuthenticationMethod>
-  <UrlBase>$app_baseurl</UrlBase>
+  <UrlBase>${urlBase}</UrlBase>
   <Branch>$app_branch</Branch>
 </Config>
 ARRCONFIG

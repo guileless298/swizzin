@@ -130,7 +130,7 @@ server {
 server {
   listen 443 ssl http2 default_server;
   listen [::]:443 ssl http2 default_server;
-  server_name _;
+  server_name ~^(?<subdomain>[^.]*)\.?(?<maindomain>.+)$;
   ssl_certificate /etc/ssl/certs/ssl-cert-snakeoil.pem;
   ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
   include snippets/ssl-params.conf;
@@ -138,6 +138,7 @@ server {
   server_tokens off;
   root /srv/;
 
+  rewrite ^ "/$subdomain$uri" break;
   include /etc/nginx/apps/*.conf;
 
   location ~ /\.ht {

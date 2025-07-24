@@ -17,7 +17,7 @@ fi
 if [[ ! -f /etc/nginx/apps/medusa.conf ]]; then
     cat > /etc/nginx/apps/medusa.conf << SRC
 location /medusa {
-  proxy_pass http://127.0.0.1:8081/medusa;
+  proxy_pass http://127.0.0.1:8081\$request_uri;
   proxy_set_header Host \$host;
   proxy_set_header X-Real-IP \$remote_addr;
   proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -26,8 +26,8 @@ location /medusa {
   proxy_set_header X-Forwarded-Port 443;
   proxy_set_header X-Forwarded-Proto \$scheme;
 
-  auth_basic "What's the password?";
-  auth_basic_user_file /etc/htpasswd.d/htpasswd.${user};
+#  auth_basic "What's the password?";
+#  auth_basic_user_file /etc/htpasswd.d/htpasswd.${user};
 
   # Websocket
   proxy_http_version 1.1;
@@ -37,7 +37,7 @@ location /medusa {
 }
 SRC
 fi
-sed -i "s/web_root.*/web_root = \"medusa\"/g" /opt/medusa/config.ini
+#sed -i "s/web_root.*/web_root = \"medusa\"/g" /opt/medusa/config.ini
 sed -i "s/web_host.*/web_host = 127.0.0.1/g" /opt/medusa/config.ini
 
 if [[ $isactive == "active" ]]; then

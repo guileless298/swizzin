@@ -16,7 +16,7 @@ fi
 #
 cat > /etc/nginx/apps/filebrowser.conf <<- NGINGCONF
 	location /filebrowser {
-	    proxy_pass https://127.0.0.1:${port}/filebrowser;
+	    proxy_pass https://127.0.0.1:${port}\$request_uri;
 	    #
 	    proxy_pass_request_headers on;
 	    #

@@ -3,7 +3,7 @@
 # Create our nginx application conf for jfa-go
 cat > /etc/nginx/apps/jfago.conf <<- NGINXCONF
 location ^~ /jfa-go {
-    proxy_pass http://localhost:8056/jfa-go;
+    proxy_pass http://localhost:8056\$request_uri;
 
     http2_push_preload on;
 

@@ -35,9 +35,9 @@ else
     main=$LE_DEFAULTCONF
 fi
 
-if [[ $main == yes ]]; then
-    sed -i "s/server_name .*;/server_name $hostname *.$hostname;/g" /etc/nginx/sites-enabled/default
-fi
+#if [[ $main == yes ]]; then
+#    sed -i "s/server_name .*;/server_name $hostname *.$hostname;/g" /etc/nginx/sites-enabled/default
+#fi
 
 if [[ -n $LE_CF_API ]] || [[ -n $LE_CF_EMAIL ]] || [[ -n $LE_CF_ZONE ]]; then
     LE_BOOL_CF=yes

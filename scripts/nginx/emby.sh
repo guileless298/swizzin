@@ -11,9 +11,8 @@
 if [[ ! -f /etc/nginx/apps/emby.conf ]]; then
     cat > /etc/nginx/apps/emby.conf << EMB
 location /emby/ {
-  rewrite /emby/(.*) /\$1 break;
   include /etc/nginx/snippets/proxy.conf;
-  proxy_pass        http://127.0.0.1:8096/;
+  proxy_pass        http://127.0.0.1:8096\$request_uri;
 }
 EMB
 fi

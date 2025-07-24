@@ -19,12 +19,12 @@ if [[ ! -f /etc/nginx/apps/dindex.conf ]]; then
 location /deluge.downloads {
   alias /home/\$remote_user/torrents/deluge;
   include /etc/nginx/snippets/fancyindex.conf;
-  auth_basic "What's the password?";
-  auth_basic_user_file /etc/htpasswd;
+#  auth_basic "What's the password?";
+#  auth_basic_user_file /etc/htpasswd;
 
   location ~* \.php$ {
 
-  } 
+  }
 }
 DIN
 fi
@@ -55,17 +55,11 @@ DUPS
 
     if [[ ! -f /etc/nginx/apps/deluge.conf ]]; then
         cat > /etc/nginx/apps/deluge.conf << 'DRP'
-location /deluge {
-  return 301 /deluge/;
-}
-
 location /deluge/ {
   include /etc/nginx/snippets/proxy.conf;
-  auth_basic "What's the password?";
-  auth_basic_user_file /etc/htpasswd;
-  proxy_set_header X-Deluge-Base "/deluge/";
-  rewrite ^/deluge/(.*) /$1 break;
-  proxy_pass http://$remote_user.deluge;
+#  auth_basic "What's the password?";
+#  auth_basic_user_file /etc/htpasswd;
+  proxy_pass http://$remote_user.deluge\$request_uri;
 }
 DRP
     fi

@@ -4,15 +4,11 @@
 
 cat > /etc/nginx/apps/flood.conf << EOF
 location /flood/api {
-  proxy_pass http://\$remote_user.flood;
+  proxy_pass http://\$remote_user.flood\$request_uri;
   proxy_buffering off;
   proxy_cache off;
-  auth_basic "What's the password?";
-  auth_basic_user_file /etc/htpasswd;
-}
-
-location /flood {
-    return 302 \$scheme://\$host/flood/;
+#  auth_basic "What's the password?";
+#  auth_basic_user_file /etc/htpasswd;
 }
 
 location /flood/ {
@@ -39,6 +35,6 @@ FLUPS
     fi
 done
 
-sed -i '/ExecStart=/ s/$/ --baseuri=\/flood/' /etc/systemd/system/flood@.service
+#sed -i '/ExecStart=/ s/$/ --baseuri=\/flood/' /etc/systemd/system/flood@.service
 systemctl daemon-reload
 systemctl try-restart flood@${user}

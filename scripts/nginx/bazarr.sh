@@ -18,7 +18,7 @@ fi
 
 cat > /etc/nginx/apps/bazarr.conf << BAZN
 location /bazarr/ {
-    proxy_pass              http://127.0.0.1:6767/bazarr/;
+    proxy_pass              http://127.0.0.1:6767\$request_uri;
     proxy_set_header        X-Real-IP               \$remote_addr;
     proxy_set_header        Host                    \$http_host;
     proxy_set_header        X-Forwarded-For         \$proxy_add_x_forwarded_for;
@@ -28,13 +28,13 @@ location /bazarr/ {
     proxy_set_header        Connection              "Upgrade";
     proxy_redirect off;
 
-    auth_basic              "What's the password?";
-    auth_basic_user_file    /etc/htpasswd.d/htpasswd.${user};
-    
+#    auth_basic              "What's the password?";
+#    auth_basic_user_file    /etc/htpasswd.d/htpasswd.${user};
+
     # Allow the Bazarr API through if you enable Auth on the block above
     location /bazarr/api {
         auth_request off;
-        proxy_pass http://127.0.0.1:6767/bazarr/api;
+        proxy_pass http://127.0.0.1:6767\$request_uri;
     }
 }
 
@@ -42,7 +42,7 @@ BAZN
 
 sed 's|ip = 0.0.0.0|ip = 127.0.0.1|' -i /opt/bazarr/data/config/config.ini
 # Replace only first occurance of base_url to prevent causing issues.
-sed -i '/^\[general\]$/,/^\[/ s/^base_url = .*/base_url = \/bazarr/' /opt/bazarr/data/config/config.ini
+#sed -i '/^\[general\]$/,/^\[/ s/^base_url = .*/base_url = \/bazarr/' /opt/bazarr/data/config/config.ini
 
 if [[ $isactive == "active" ]]; then
     systemctl start bazarr

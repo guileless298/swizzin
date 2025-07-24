@@ -6,16 +6,11 @@ users=($(cut -d: -f1 < /etc/htpasswd))
 
 if [[ ! -f /etc/nginx/apps/nzbget.conf ]]; then
     cat > /etc/nginx/apps/nzbget.conf << 'NRP'
-location /nzbget {
-  return 301 /nzbget/;
-}
-
 location /nzbget/ {
   include /etc/nginx/snippets/proxy.conf;
-  auth_basic "What's the password?";
-  auth_basic_user_file /etc/htpasswd;
-  rewrite ^/nzbget/(.*) /$1 break;
-  proxy_pass http://$remote_user.nzbget;
+#  auth_basic "What's the password?";
+#  auth_basic_user_file /etc/htpasswd;
+  proxy_pass http://$remote_user.nzbget\$request_uri;
 }
 NRP
 fi

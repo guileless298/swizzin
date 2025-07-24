@@ -10,8 +10,8 @@ if [[ ! -f /etc/nginx/apps/tmsindex.conf ]]; then
 location /transmission.downloads {
     alias /home/\$remote_user/transmission/downloads;
     include /etc/nginx/snippets/fancyindex.conf;
-    auth_basic "What's the password?";
-    auth_basic_user_file /etc/htpasswd;
+#    auth_basic "What's the password?";
+#    auth_basic_user_file /etc/htpasswd;
 
   location ~* \.php\$ {
 
@@ -22,10 +22,6 @@ fi
 
 if [[ ! -f /etc/nginx/apps/transmission.conf ]]; then
     cat > /etc/nginx/apps/transmission.conf << TCONF
-location /transmission {
-    return 301 /transmission/web/;
-}
-
 location /transmission/ {
     proxy_set_header X-Real-IP \$remote_addr;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -35,9 +31,9 @@ location /transmission/ {
     proxy_set_header Connection "";
     proxy_pass_header X-Transmission-Session-Id;
     add_header   Front-End-Https   on;
-    auth_basic "What's the password?";
-    auth_basic_user_file /etc/htpasswd;
-    proxy_pass http://\$remote_user.transmission;
+#    auth_basic "What's the password?";
+#    auth_basic_user_file /etc/htpasswd;
+    proxy_pass http://\$remote_user.transmission\$request_uri;
 }
 TCONF
 fi
