@@ -138,7 +138,7 @@ server {
   server_tokens off;
   root /srv/;
 
-  rewrite ^ "/$subdomain$uri" break;
+  rewrite ^ "/\$subdomain\$uri" break;
   include /etc/nginx/apps/*.conf;
 
   location ~ /\.ht {
