@@ -7,14 +7,14 @@ sed -Ei "
 /map \$host \$matched_domain/,/}/d;
 1i\\
 map \$host \$matched_subdomain {\\
-    ~^[0-9]\\..+$ \"panel\";\\
-    ~^([^.]+)\\..+$ \$1;\\
+    ~^[0-9]\\\\..+\$ \"panel\";\\
+    ~^([^.]+)\\\\..+\$ \$1;\\
     default \"panel\";\\
 }\\
 \\
 map \$host \$matched_domain {\\
-    ~^[0-9]\\..+$ \$host;\\
-    ~^[^.]+\\.(.+)$ \$1;\\
+    ~^[0-9]\\\\..+\$ \$host;\\
+    ~^[^.]+\\\\.(.+)\$ \$1;\\
     default \$host;\\
 }\\
 
