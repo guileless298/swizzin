@@ -75,8 +75,8 @@ DRP
             /auth_basic_user_file/d;
             /X-Deluge-Base/d;
             /rewrite/d;
-            /location \/deluge {/,/}/d;
-            s|{|{\
+            4d;
+            1a\
             auth_request /subdomain-auth;|;
             s|$remote_user.deluge;|$upstream_http_x_remote_user.deluge$request_uri;|
             ' /etc/nginx/apps/deluge.conf

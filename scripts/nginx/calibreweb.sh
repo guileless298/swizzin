@@ -15,7 +15,8 @@ if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
     /X-Script-Name/d;
-    s| {|/ {|;
+    0,/location \/calibrecs\/ {/a\
+    location /calibreweb/ {
     s|:8083;|:8083$request_uri;|
     ' /etc/nginx/apps/bazarr.conf
 fi

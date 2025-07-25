@@ -51,7 +51,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /auth_basic/d;
     /auth_basic_user_file/d;
     /rewrite/d;
-    s|{|{\
+    0,/location \/bazarr\/ {/a\
     auth_request /subdomain-auth;|;
     proxy_pass              http://127.0.0.1:6767$request_uri;
     ' /etc/nginx/apps/bazarr.conf
