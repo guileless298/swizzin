@@ -7,14 +7,14 @@ sed -Ei "
 /map \$host \$matched_domain/,/}/d;
 1i\\
 map \$host \$matched_subdomain {\\
-    ~^[0-9]\..+$ \"panel\";\\
-    ~^(?<matched_subdomain>[^.]+)\..+$ \$matched_subdomain;\\
+    ~^[0-9]\\..+$ \"panel\";\\
+    ~^(?<matched_subdomain>[^.]+)\\..+$ \$matched_subdomain;\\
     default \"panel\";\\
 }\\
 \\
 map \$host \$matched_domain {\\
-    ~^[0-9]\..+$ \$host;\\
-    ~^[^.]+\.(?<matched_domain>.+)$ \$matched_domain;\\
+    ~^[0-9]\\..+$ \$host;\\
+    ~^[^.]+\\.(?<matched_domain>.+)$ \$matched_domain;\\
     default \$host;\\
 }\\
 
@@ -31,7 +31,7 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
     proxy_pass http://127.0.0.1:8888/validate;\\
     proxy_set_header Host \$host;\\
     proxy_pass_request_body off;\\
-    proxy_set_header Content-Length "";\\
+    proxy_set_header Content-Length \"\";\\
   }\\
   \\
   rewrite ^ \"/\$matched_subdomain\$uri\" break;
