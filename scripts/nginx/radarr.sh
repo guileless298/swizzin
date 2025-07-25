@@ -78,7 +78,7 @@ chown -R "$user":"$user" "$app_configdir"
 
 if [[ -f /install/.subdomain.lock ]]; then
     sed -Ei "
-    s|^([[:space::]]*)auth_basic off;|\1auth_request off;|;
+    s|^([[:space:]]*)auth_basic off;|\1auth_request off;|;
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
     /^[[:space:]]*proxy_pass/ s|:$app_port;|:$app_port\$request_uri;|
