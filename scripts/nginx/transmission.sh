@@ -77,6 +77,12 @@ TDCONF
 done
 
 if [[ -f /install/.subdomain.lock ]]; then
+    sed -Ei '
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    s|^location /transmission\.downloads \{|location /panel/transmission.downloads/ {\
+    auth_request /subdomain-auth;|
+    ' /etc/nginx/apps/tmsindex.conf
     # shellcheck disable=SC2016
     sed -Ei '
     /^location \/transmission \{/,/^\}$/d;

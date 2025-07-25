@@ -75,7 +75,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     sed -Ei '
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
-    s|^location /qbittorrent\.downloads \{|location /panel/qbittorrent.downloads {
+    s|^location /qbittorrent\.downloads \{|location /panel/qbittorrent.downloads/ {\
     auth_request /subdomain-auth;|
     ' /etc/nginx/apps/qbtindex.conf
     # shellcheck disable=SC2016
