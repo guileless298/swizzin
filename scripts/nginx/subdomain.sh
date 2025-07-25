@@ -14,7 +14,7 @@ sed -Ei '
   }\
   \
   location ~ ^/(?<service>[a-z]+)$ {\
-    return 301 $scheme://$service.$matched_domain$request_uri;
+    return 301 $scheme://$service.$matched_domain$request_uri;\
   }\
   \
   rewrite ^ "/$subdomain$uri" break;
