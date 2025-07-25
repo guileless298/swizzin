@@ -44,12 +44,12 @@ done
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /location \/nzbget {/,/}/d;
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    /rewrite/d;
-    s|{|{\
-    auth_request /subdomain-auth;|;
-    s|$remote_user.nzbget;|$upstream_http_x_remote_user.nzbget$request_uri;|
+    /^location \/nzbget \{/,/^\}$/d;
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*rewrite/d;
+    /^[[:space:]]*proxy_pass/ s|$remote_user.nzbget;|$upstream_http_x_remote_user.nzbget$request_uri;|;
+    0,/^location \/nzbget\/ \{/a\
+  auth_request /subdomain-auth;
     ' /etc/nginx/apps/nzbget.conf
 fi

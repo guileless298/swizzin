@@ -78,12 +78,12 @@ chown -R "$user":"$user" "$app_configdir"
 
 if [[ -f /install/.subdomain.lock ]]; then
     sed -Ei "
-    s|auth_basic off;|auth_request off;|;
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    s| \{|/ {\\
-    auth_request /subdomain-auth;|;
-    s|:$app_port;|:$app_port\$request_uri;|
+    s|^([[:space::]]*)auth_basic off;|\1auth_request off;|;
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|:$app_port;|:$app_port\$request_uri;|;
+    s|^location /$app_baseurl \{|location /$app_baseurl/ {\\
+    auth_request /subdomain-auth;|
     " /etc/nginx/apps/$app_name.conf
     sed "s|<UrlBase>$app_baseurl</UrlBase>|<UrlBase />|" -i "$app_configdir"/config.xml
 fi

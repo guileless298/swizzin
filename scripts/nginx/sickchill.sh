@@ -30,11 +30,11 @@ sed -i "s/web_host.*/web_host = 127.0.0.1/g" /opt/sickchill/config.ini
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    s| {|/ {\
-    auth_request /subdomain-auth;|;
-    s|/sickchill;|$request_uri;|
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|/sickchill;|$request_uri;|;
+    s|^location /sickchill \{|location /sickchill/ {\
+    auth_request /subdomain-auth;|
     ' /etc/nginx/apps/sickchill.conf
     sed -i "s/web_root.*/web_root =/g" /opt/sickchill/config.ini
 fi

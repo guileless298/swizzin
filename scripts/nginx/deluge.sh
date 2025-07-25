@@ -69,16 +69,22 @@ location /deluge/ {
 }
 DRP
         if [[ -f /install/.subdomain.lock ]]; then
+            sed -Ei '
+            /^[[:space:]]*auth_basic/d;
+            /^[[:space:]]*auth_basic_user_file/d;
+            s|^location /deluge\.downloads \{|location /panel/deluge.downloads {
+  auth_request /subdomain-auth;|
+            ' /etc/nginx/apps/dindex.conf
             # shellcheck disable=SC2016
             sed -Ei '
-            /auth_basic/d;
-            /auth_basic_user_file/d;
-            /X-Deluge-Base/d;
-            /rewrite/d;
-            4d;
-            1a\
-            auth_request /subdomain-auth;|;
-            s|$remote_user.deluge;|$upstream_http_x_remote_user.deluge$request_uri;|
+            /^location \/deluge \{/,/^\}$/d;
+            /^[[:space:]]*auth_basic/d;
+            /^[[:space:]]*auth_basic_user_file/d;
+            /^[[:space:]]*proxy_set_header[[:space:]]+X-Deluge-Base/d;
+            /^[[:space:]]*rewrite/d;
+            /^[[:space:]]*proxy_pass/ s|$remote_user.deluge;|$upstream_http_x_remote_user.deluge$request_uri;|;
+            0,/^location \/deluge\/ \{/a\
+  auth_request /subdomain-auth;
             ' /etc/nginx/apps/deluge.conf
         fi
     fi

@@ -30,11 +30,11 @@ fi
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    s|{|{\
-    auth_request /subdomain-auth;|;
-    s|:4200;|:4200$request_uri;|
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|:4200;|:4200$request_uri;|;
+    0,/^location \/shell\/ \{/a\
+    auth_request /subdomain-auth;
     ' /etc/nginx/apps/shell.conf
 fi
 

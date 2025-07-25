@@ -25,6 +25,5 @@ RAP
 fi
 
 if [[ -f /install/.subdomain.lock ]]; then
-    # shellcheck disable=SC2016
-    sed -i 's| {|/ {|' /etc/nginx/apps/librespeed.conf
+    sed -i 's|^location /librespeed \{|location /librespeed/ {|;' /etc/nginx/apps/librespeed.conf
 fi

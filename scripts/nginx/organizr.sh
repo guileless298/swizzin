@@ -49,7 +49,7 @@ ORGNGINX
 # echo "opcache.blacklist_filename=$blacklist_path" >> /etc/php/$phpv/fpm/php.ini
 
 if [[ -f /install/.subdomain.lock ]]; then
-    sed -i 's| {|/ {|' /etc/nginx/apps/organizr.conf
+    sed -i 's|^location /organizr \{|location /organizr {|' /etc/nginx/apps/organizr.conf
 fi
 
 reload_php_fpm

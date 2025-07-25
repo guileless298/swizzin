@@ -31,9 +31,9 @@ fi
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    s| {|/ {\
-    auth_request /subdomain-auth;|
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    s|^location /rapidleech \{|location /rapidleech/ {\
+  auth_request /subdomain-auth;|
     ' /etc/nginx/apps/rapidleech.conf
 fi

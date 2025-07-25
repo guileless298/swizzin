@@ -32,11 +32,11 @@ sed -i "s|^url_base = .*|url_base = /sabnzbd|g" /home/${user}/.config/sabnzbd/sa
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    s| {|/ {\
-    auth_request /subdomain-auth;|;
-    s|/sabnzbd;|$request_uri;|
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|/sabnzbd;|$request_uri;|;
+    s|^location /sabnzbd \{|location /sabnzbd/ {\
+  auth_request /subdomain-auth;|
     ' /etc/nginx/apps/sabnzbd.conf
     sed -i "s|^url_base = .*|url_base =|g" /home/${user}/.config/sabnzbd/sabnzbd.ini
 fi

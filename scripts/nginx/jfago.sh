@@ -20,7 +20,7 @@ NGINXCONF
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    s| {|/ {|;
-    s|/jfa-go;|$request_uri;|
+    s|^location \^~ /jfa-go \{|location /jfa-go/ {|;
+    /^[[:space:]]*proxy_pass/ s|/jfa-go;|$request_uri;|
     ' /etc/nginx/apps/jfago.conf
 fi

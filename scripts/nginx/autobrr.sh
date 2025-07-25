@@ -39,12 +39,11 @@ done
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /proxy_pass/d;
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    /rewrite/d;
-    0,/location \/autobrr\/ \{/a\
-    auth_request /subdomain-auth;\
-    proxy_pass              http://$upstream_http_x_remote_user.autobrr$request_uri;|
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*rewrite/d;
+    /^[[:space:]]*proxy_pass/ s|$remote_user.autobrr;|$upstream_http_x_remote_user.autobrr$request_uri;|;
+    0,/^location \/autobrr\/ \{/a\
+    auth_request /subdomain-auth;
     ' /etc/nginx/apps/autobrr.conf
 fi

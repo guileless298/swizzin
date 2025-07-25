@@ -26,11 +26,10 @@ fi
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /proxy_pass/d;
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    s|{|{\
-    auth_request /subdomain-auth;
-    proxy_pass              http://127.0.0.1:8384$request_uri;|
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|:8384;|:8384$request_uri;|;
+    0,/^location \/syncthing\/ \{/a\
+  auth_request /subdomain-auth;
     ' /etc/nginx/apps/syncthing.conf
 fi

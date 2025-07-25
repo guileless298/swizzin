@@ -79,11 +79,11 @@ done
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /location \/transmission {/,/}/d;
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    s|{|{\
-    auth_request /subdomain-auth;|;
-    s|$remote_user.transmission;|$upstream_http_x_remote_user.transmission$request_uri;|
+    /^location \/transmission \{/,/^\}$/d;
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|$remote_user.transmission;|$upstream_http_x_remote_user.transmission$request_uri;|;
+    0,/^location \/transmission\/ \{/a\
+    auth_request /subdomain-auth;
     ' /etc/nginx/apps/transmission.conf
 fi

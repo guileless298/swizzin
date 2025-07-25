@@ -44,13 +44,12 @@ sed -i '/ExecStart=/ s/$/ --baseuri=\/flood/' /etc/systemd/system/flood@.service
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /proxy_pass/d;
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    /location \/flood {/,/}/d;
-    s|location /flood/api \{|location /flood/api/ {\
-    auth_request /subdomain-auth;\
-    proxy_pass http://$upstream_http_x_remote_user.flood$request_uri;
+    /^location \/flood \{/,/^\}$/d;
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|$remote_user.flood;|$upstream_http_x_remote_user.flood$request_uri;|;
+    s|^location /flood/api \{|location /flood/api/ {\
+    auth_request /subdomain-auth;|
     ' /etc/nginx/apps/flood.conf
 fi
 

@@ -78,13 +78,13 @@ ARRCONFIG
 chown -R "$user":"$user" "$app_configdir"
 
 if [[ -f /install/.subdomain.lock ]]; then
-    # shellcheck disable=SC2016
     sed -Ei "
-    /proxy_pass/d;
-    s/auth_basic off;/auth_request off;/g;
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    s| {|/ {\
+    s|^([[:space:]]*)auth_basic off;|\1auth_request off;|g;
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|:$app_port;|:$app_port\$request_uri;|;
+    s|^location \^~ |location |;
+    s|^location /$app_baseurl \{/|location /$app_baseurl/ {
     auth_request /subdomain-auth;|
     " /etc/nginx/apps/$app_name.conf
     sed "s|<UrlBase>$app_baseurl</UrlBase>|<UrlBase />|g" -i "$app_configdir"/config.xml

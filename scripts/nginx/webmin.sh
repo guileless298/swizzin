@@ -34,12 +34,12 @@ EOF
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /proxy_redirect/d;
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    s|{|{\
-    auth_request /subdomain-auth;|;
-    s|:10000;|:10000$request_uri;|
+    /^[[:space:]]*proxy_redirect/d;
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|:10000;|:10000$request_uri;|;
+    0,/^location \/webmin\/ \{/a\
+    auth_request /subdomain-auth;
     ' /etc/nginx/apps/jackett.conf
     sed -i 's|/webmin||' /etc/webmin/config
 fi

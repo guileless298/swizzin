@@ -25,8 +25,8 @@ systemctl try-restart airsonic
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    s|location /airsonic \{|location /airsonic/ {|;
-    s|:8185;|:8185$request_uri;|;
+    s|^location /airsonic \{|location /airsonic/ {|;
+    /^[[:space:]]*proxy_pass/ s|:8185;|:8185$request_uri;|
     ' /etc/nginx/apps/airsonic.conf
     sed -i 's| -Dserver.context-path=/airsonic||' /etc/systemd/system/airsonic.service
 fi

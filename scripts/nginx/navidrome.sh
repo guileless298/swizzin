@@ -26,10 +26,10 @@ NGX
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    s| {|/ {|;
-    s|/navidrome;|$request_uri;|
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    s|^location /navidrome \{|location /navidrome/ {|;
+    /^[[:space:]]*proxy_pass/ s|/navidrome;|$request_uri;|
     ' /etc/nginx/apps/navidrome.conf
     sed -r 's|BaseUrl = (.*)|BaseUrl = ""|g' -i "/home/${user}/.config/navidrome/navidrome.toml"
 fi

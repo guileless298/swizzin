@@ -19,12 +19,11 @@ sed '/ExecStart=/ s/$/ --listen-on 127.0.0.1 --url-prefix \/calibrecs --enable-l
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /proxy_pass/d;
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    /location \/calibrecs {/,/}/d;
-    0,/location \/calibrecs\/ {/a\
-    auth_request /subdomain-auth;|
+    /^location \/calibrecs\/ \{/,/^\}$/d;
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    0,/^location \/calibrecs\/ \{/a\
+    auth_request /subdomain-auth;
     ' /etc/nginx/apps/bazarr.conf
     sed -i 's| --url-prefix /calibrecs||' /etc/systemd/system/calibrecs.service
 fi

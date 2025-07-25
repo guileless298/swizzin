@@ -21,12 +21,12 @@ location ^~ /mylar {
 EON
 
 if [[ -f /install/.subdomain.lock ]]; then
-    # shellcheck disable=SC2016
     sed -Ei "
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    s| {|/ {|;
-    s|:${port};|:${port}\$request_uri;|
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|:$port;|:$port\$request_uri;|
+    s|^location \^~ /mylar \{|location /mylar/ {
+    auth_request /subdomain-auth;|
     " /etc/nginx/apps/mylar.conf
     sed -r 's|http_root = (.*)|http_root =|g' -i "/home/${mylar_owner}/.config/mylar/config.ini"
 fi

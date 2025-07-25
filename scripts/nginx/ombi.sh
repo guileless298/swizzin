@@ -50,12 +50,11 @@ CONF
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /location \/ombi {/,/}/d;
-    /proxy_pass/d;
-    /if (/,/}/d;
-    s|{|{\
-    auth_request /subdomain-auth;
-    proxy_pass http://127.0.0.1:3000$request_uri;|
+    /^location \/ombi \{/,/^\}$/d;
+    /^if \(/,/^\}$/d;
+    /^[[:space:]]*proxy_pass/ s|/ombi/;|$request_uri;|;
+    s|^location \^~ /ombi/ \{|location /ombi/ {
+    auth_request /subdomain-auth;|
     ' /etc/nginx/apps/ombi.conf
     sed -i 's/ --baseurl /ombi//g' /etc/systemd/system/ombi.service.d/override.conf
 fi

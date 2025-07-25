@@ -54,5 +54,8 @@ NGINXCONF
 
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
-    sed -i 's/:8920;/:8920$request_uri;/' /etc/nginx/apps/jellyfin.conf
+    sed -Ei '
+    s|^location /jellyfin \{|location /jellyfin/ {|;
+    /^[[:space:]]*proxy_pass/ s|:8920;|:8920$request_uri;|
+    ' /etc/nginx/apps/jellyfin.conf
 fi

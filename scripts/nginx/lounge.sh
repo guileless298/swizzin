@@ -19,7 +19,7 @@ sed -i 's/reverseProxy: false,/reverseProxy: true,/g' /opt/lounge/.thelounge/con
 
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
-    sed -i 's|:9000/;|:9000$request_uri;|' /etc/nginx/apps/lounge.conf
+    sed -i '/^[[:space:]]*proxy_pass/ s|:9000/;|:9000$request_uri;|' /etc/nginx/apps/lounge.conf
 fi
 
 if [[ $isactive == "active" ]]; then

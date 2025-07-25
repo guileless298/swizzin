@@ -32,14 +32,12 @@ fi
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    /sub_filter_types/d;
-    /sub_filter/d;
-    /sub_filter_once/d;
-    s|{|{\
-    auth_request /subdomain-auth;|;
-    s|:8000/;|:8000$request_uri;|
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*sub_filter/d;
+    /^[[:space:]]*proxy_pass/ s|:8000/;|:8000$request_uri;|;
+    0,/^location \/pyload\/ \{/a\
+  auth_request /subdomain-auth;
     ' /etc/nginx/apps/pyload.conf
     sed -i 's/"Path prefix" = /"Path prefix" =/g' /opt/pyload/pyload.conf
 fi

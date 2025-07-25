@@ -43,12 +43,11 @@ sed -i "s/web_host.*/web_host = 127.0.0.1/g" /opt/medusa/config.ini
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /proxy_pass/d;
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    s| {|/ {\
-    auth_request /subdomain-auth;
-    proxy_pass http://127.0.0.1:8081$request_uri|
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|/medusa;|$request_uri;|;
+    s|^location /medusa \{|location /medusa/ {\
+    auth_request /subdomain-auth;|
     ' /etc/nginx/apps/medusa.conf
     sed -i "s/web_root.*/web_root = \"\"/g" /opt/medusa/config.ini
 fi

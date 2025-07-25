@@ -47,13 +47,12 @@ sed -i '/^\[general\]$/,/^\[/ s/^base_url = .*/base_url = \/bazarr/' /opt/bazarr
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /proxy_pass/d;
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    /rewrite/d;
-    0,/location \/bazarr\/ {/a\
-    auth_request /subdomain-auth;|;
-    proxy_pass              http://127.0.0.1:6767$request_uri;
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*rewrite/d;
+    /^[[:space:]]*proxy_pass/ s|/bazarr/;|$request_uri;|;
+    0,/^location \/bazarr\/ \{/a\
+    auth_request /subdomain-auth;
     ' /etc/nginx/apps/bazarr.conf
     sed -i '/^\[general\]$/,/^\[/ s/^base_url = .*/base_url =/' /opt/bazarr/data/config/config.ini
 fi

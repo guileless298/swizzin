@@ -52,7 +52,7 @@ NGINGCONF
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
-    /proxy_rewrite/d;
-    s|/filebrowser;|$request_uri;|
+    s|^location /filebrowser \{|location /filebrowser/ {|;
+    /^[[:space:]]*proxy_pass/ s|/filebrowser;|$request_uri;|
     ' /etc/nginx/apps/filebrowser.conf
 fi

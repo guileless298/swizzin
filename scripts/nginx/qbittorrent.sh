@@ -72,17 +72,22 @@ QBTUC
 done
 
 if [[ -f /install/.subdomain.lock ]]; then
+    sed -Ei '
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    s|^location /qbittorrent\.downloads \{|location /panel/qbittorrent.downloads {
+    auth_request /subdomain-auth;|
+    ' /etc/nginx/apps/qbtindex.conf
     # shellcheck disable=SC2016
     sed -Ei '
-    /proxy_pass/d;
-    /auth_basic/d;
-    /auth_basic_user_file/d;
-    /rewrite/d;
-    /proxy_cookie_path/d;
-    s|/qbt|/qbt/|;
-    s|/qbittorrent/;|$scheme://qbittorrent.$matched_domain$request_uri;|;
-    s|{|{\
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*rewrite/d;
+    /^[[:space:]]*proxy_cookie_path/d;
+    s|^location /qbt \{|location /qbt/ {|;
+    /^[[:space:]]*return/ s|/qbittorrent/;|$scheme://qbittorrent.$matched_domain$request_uri;|;
+    /^[[:space:]]*proxy_pass/ s|$request_uri.qbittorrent|$upstream_http_x_remote_user.qbittorrent$request_uri;|;
+    0,/^location \/qbittorrent\/ \{/a\
     auth_request /subdomain-auth;
-    proxy_pass              http://$upstream_http_x_remote_user.qbittorrent$request_uri;|
     ' /etc/nginx/apps/qbittorrent.conf
 fi
