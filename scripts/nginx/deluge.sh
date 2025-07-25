@@ -83,7 +83,7 @@ DRP
             /^[[:space:]]*proxy_set_header[[:space:]]+X-Deluge-Base/d;
             /^[[:space:]]*rewrite/d;
             /^[[:space:]]*proxy_pass/ s|$remote_user.deluge;|$upstream_http_x_remote_user.deluge$request_uri;|;
-            0,/^location \/deluge\/ \{/a\
+            /^location \/deluge\/ \{/a\
   auth_request /subdomain-auth;
             ' /etc/nginx/apps/deluge.conf
         fi

@@ -39,7 +39,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
     /^[[:space:]]*proxy_pass/ s|/jacket/;|$request_uri;|;
-    0,/^location \/jackett\/ \{/a\
+    /^location \/jackett\/ \{/a\
   auth_request /subdomain-auth;
     ' /etc/nginx/apps/jackett.conf
     sed -i "s/\"BasePathOverride.*/\"BasePathOverride\": \"\",/g" /home/${MASTER}/.config/Jackett/ServerConfig.json

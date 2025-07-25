@@ -51,7 +51,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic_user_file/d;
     /^[[:space:]]*rewrite/d;
     /^[[:space:]]*proxy_pass/ s|/bazarr/;|$request_uri;|;
-    0,/^location \/bazarr\/ \{/a\
+    /^location \/bazarr\/ \{/a\
     auth_request /subdomain-auth;
     ' /etc/nginx/apps/bazarr.conf
     sed -i '/^\[general\]$/,/^\[/ s/^base_url = .*/base_url =/' /opt/bazarr/data/config/config.ini

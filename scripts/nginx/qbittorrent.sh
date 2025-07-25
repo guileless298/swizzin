@@ -87,7 +87,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     s|^location /qbt \{|location /qbt/ {|;
     /^[[:space:]]*return/ s|/qbittorrent/;|$scheme://qbittorrent.$matched_domain$request_uri;|;
     /^[[:space:]]*proxy_pass/ s|$request_uri.qbittorrent|$upstream_http_x_remote_user.qbittorrent$request_uri;|;
-    0,/^location \/qbittorrent\/ \{/a\
+    /^location \/qbittorrent\/ \{/a\
     auth_request /subdomain-auth;
     ' /etc/nginx/apps/qbittorrent.conf
 fi

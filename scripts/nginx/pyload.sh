@@ -36,7 +36,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic_user_file/d;
     /^[[:space:]]*sub_filter/d;
     /^[[:space:]]*proxy_pass/ s|:8000/;|:8000$request_uri;|;
-    0,/^location \/pyload\/ \{/a\
+    /^location \/pyload\/ \{/a\
   auth_request /subdomain-auth;
     ' /etc/nginx/apps/pyload.conf
     sed -i 's/"Path prefix" = /"Path prefix" =/g' /opt/pyload/pyload.conf

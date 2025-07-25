@@ -38,7 +38,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
     /^[[:space:]]*proxy_pass/ s|:10000;|:10000$request_uri;|;
-    0,/^location \/webmin\/ \{/a\
+    /^location \/webmin\/ \{/a\
     auth_request /subdomain-auth;
     ' /etc/nginx/apps/webmin.conf
     sed -i 's|/webmin||' /etc/webmin/config

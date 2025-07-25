@@ -29,7 +29,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
     /^[[:space:]]*proxy_pass/ s|:8384;|:8384$request_uri;|;
-    0,/^location \/syncthing\/ \{/a\
+    /^location \/syncthing\/ \{/a\
   auth_request /subdomain-auth;
     ' /etc/nginx/apps/syncthing.conf
 fi
