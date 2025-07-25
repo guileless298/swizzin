@@ -12,12 +12,21 @@ location /airsonic {
 	proxy_set_header X-Forwarded-Host  \$http_host;
 	proxy_set_header Host              \$http_host;
 	proxy_max_temp_file_size           0;
-	proxy_pass                         http://127.0.0.1:8185\$request_uri;
+	proxy_pass                         http://127.0.0.1:8185;
 	proxy_redirect                     http:// https://;
 }
 NGINXCONF
 
 #shellcheck disable=SC2016,SC1003
-sed -i '/-Dserver.port=${PORT}/c\          -Dserver.port=${PORT} -Dserver.address=127.0.0.1 \\' /etc/systemd/system/airsonic.service
+sed -i '/-Dserver.port=${PORT}/c\          -Dserver.port=${PORT} -Dserver.address=127.0.0.1 -Dserver.context-path=/airsonic \\' /etc/systemd/system/airsonic.service
 systemctl daemon-reload
 systemctl try-restart airsonic
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    s| {|/ {|;
+    s|:8185;|:8185$request_uri;|;
+    ' /etc/nginx/apps/airsonic.conf
+    sed -i 's| -Dserver.context-path=/airsonic||' /etc/systemd/system/airsonic.service
+fi

@@ -16,9 +16,13 @@ fi
 systemctl stop jackett@$MASTER
 if [[ ! -f /etc/nginx/apps/jackett.conf ]]; then
     cat > /etc/nginx/apps/jackett.conf << RAD
+location /jackett {
+  return 301 /jackett/;
+}
+
 location /jackett/ {
   include /etc/nginx/snippets/proxy.conf;
-  proxy_pass http://127.0.0.1:9117\$request_uri;
+  proxy_pass http://127.0.0.1:9117/jackett/;
   auth_basic "What's the password?";
   auth_basic_user_file /etc/htpasswd.d/htpasswd.${MASTER};
 }
@@ -26,7 +30,20 @@ RAD
 fi
 
 #sed -i "s/\"AllowExternal.*/\"AllowExternal\": false,/g" /home/${MASTER}/.config/Jackett/ServerConfig.json
-#sed -i "s/\"BasePathOverride.*/\"BasePathOverride\": \"\/jackett\",/g" /home/${MASTER}/.config/Jackett/ServerConfig.json
+sed -i "s/\"BasePathOverride.*/\"BasePathOverride\": \"\/jackett\",/g" /home/${MASTER}/.config/Jackett/ServerConfig.json
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /location \/jackett {/,/}/d;
+    /auth_basic/d;
+    /auth_basic_user_file/d;
+    s|{|{\
+    auth_request /subdomain-auth;|;
+    s|/jacket/;|$request_uri;|
+    ' /etc/nginx/apps/jackett.conf
+    sed -i "s/\"BasePathOverride.*/\"BasePathOverride\": \"\",/g" /home/${MASTER}/.config/Jackett/ServerConfig.json
+fi
 
 if [[ $isactive == "active" ]]; then
     systemctl start jackett@$MASTER

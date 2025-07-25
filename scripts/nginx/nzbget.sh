@@ -6,11 +6,16 @@ users=($(cut -d: -f1 < /etc/htpasswd))
 
 if [[ ! -f /etc/nginx/apps/nzbget.conf ]]; then
     cat > /etc/nginx/apps/nzbget.conf << 'NRP'
+location /nzbget {
+  return 301 /nzbget/;
+}
+
 location /nzbget/ {
   include /etc/nginx/snippets/proxy.conf;
-#  auth_basic "What's the password?";
-#  auth_basic_user_file /etc/htpasswd;
-  proxy_pass http://$remote_user.nzbget\$request_uri;
+  auth_basic "What's the password?";
+  auth_basic_user_file /etc/htpasswd;
+  rewrite ^/nzbget/(.*) /$1 break;
+  proxy_pass http://$remote_user.nzbget;
 }
 NRP
 fi
@@ -35,3 +40,16 @@ NZBUPS
         systemctl restart nzbget@$u
     fi
 done
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /location \/nzbget {/,/}/d;
+    /auth_basic/d;
+    /auth_basic_user_file/d;
+    /rewrite/d;
+    s|{|{\
+    auth_request /subdomain-auth;|;
+    s|$remote_user.nzbget;|$upstream_http_x_remote_user.nzbget$request_uri;|
+    ' /etc/nginx/apps/nzbget.conf
+fi

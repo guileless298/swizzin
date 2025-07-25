@@ -23,4 +23,6 @@ rm_if_exists "/etc/cron.d/set_interface"
 # rm_if_exists "/srv/organizr"
 rm_if_exists "/install/.organizr.lock"
 
+rm_if_exists "/install/.subdomain.lock"
+
 rm /install/.nginx.lock

@@ -11,8 +11,17 @@
 if [[ ! -f /etc/nginx/apps/emby.conf ]]; then
     cat > /etc/nginx/apps/emby.conf << EMB
 location /emby/ {
+  rewrite /emby/(.*) /\$1 break;
   include /etc/nginx/snippets/proxy.conf;
-  proxy_pass        http://127.0.0.1:8096\$request_uri;
+  proxy_pass        http://127.0.0.1:8096/;
 }
 EMB
+fi
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /rewrite/d;
+    s|:8096/;|:8096$request_uri;|
+    ' /etc/nginx/apps/emby.conf
 fi

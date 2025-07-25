@@ -13,6 +13,10 @@ isactive=$(systemctl is-active netdata)
 
 if [[ ! -f /etc/nginx/apps/netdata.conf ]]; then
     cat > /etc/nginx/apps/netdata.conf << NET
+location /netdata {
+  return 301 /netdata/;
+}
+
 location ~ /netdata/(?<ndpath>.*) {
   proxy_redirect off;
   proxy_set_header Host \$host;
@@ -24,9 +28,9 @@ location ~ /netdata/(?<ndpath>.*) {
   proxy_pass_request_headers on;
   proxy_set_header Connection "keep-alive";
   proxy_store off;
-  proxy_pass http://127.0.0.1:19999\$request_uri;
-#  auth_basic "What's the password?";
-#  auth_basic_user_file /etc/htpasswd.d/htpasswd.${user};
+  proxy_pass http://127.0.0.1:19999/\$ndpath\$is_args\$args;
+  auth_basic "What's the password?";
+  auth_basic_user_file /etc/htpasswd.d/htpasswd.${user};
 
   gzip on;
   gzip_proxied any;
@@ -35,6 +39,19 @@ location ~ /netdata/(?<ndpath>.*) {
 NET
 fi
 sed -i "s/# bind to = \*/bind to = 127.0.0.1/g" /etc/netdata/netdata.conf
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /location \/netdata {/,/}/d;
+    /auth_basic/d;
+    /auth_basic_user_file/d;
+    s|location ~ /netdata/(?<ndpath>.*) {|location /netdata/ {\
+    auth_request /subdomain-auth;|;
+    s|/$ndpath$is_args$args;|$request_uri;|
+    ' /etc/nginx/apps/netdata.conf
+fi
+
 if [[ $isactive == "active" ]]; then
     systemctl restart netdata
 fi

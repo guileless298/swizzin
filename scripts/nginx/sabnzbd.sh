@@ -19,15 +19,27 @@ if [[ ! -f /etc/nginx/apps/sabnzbd.conf ]]; then
     cat > /etc/nginx/apps/sabnzbd.conf << SAB
 location /sabnzbd {
   include /etc/nginx/snippets/proxy.conf;
-  proxy_pass        http://127.0.0.1:65080\$request_uri;
-#  auth_basic "What's the password?";
-#  auth_basic_user_file /etc/htpasswd.d/htpasswd.${user};
+  proxy_pass        http://127.0.0.1:65080/sabnzbd;
+  auth_basic "What's the password?";
+  auth_basic_user_file /etc/htpasswd.d/htpasswd.${user};
 }
 SAB
 fi
 
 sed -i "s|^host = .*|host = 127.0.0.1|g" /home/${user}/.config/sabnzbd/sabnzbd.ini
-#sed -i "s|^url_base = .*|url_base = /sabnzbd|g" /home/${user}/.config/sabnzbd/sabnzbd.ini
+sed -i "s|^url_base = .*|url_base = /sabnzbd|g" /home/${user}/.config/sabnzbd/sabnzbd.ini
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /auth_basic/d;
+    /auth_basic_user_file/d;
+    s| {|/ {\
+    auth_request /subdomain-auth;|;
+    s|/sabnzbd;|$request_uri;|
+    ' /etc/nginx/apps/sabnzbd.conf
+    sed -i "s|^url_base = .*|url_base =|g" /home/${user}/.config/sabnzbd/sabnzbd.ini
+fi
 
 if [[ $active == "active" ]]; then
     systemctl start sabnzbd

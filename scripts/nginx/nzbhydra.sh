@@ -19,14 +19,27 @@ if [[ ! -f /etc/nginx/apps/nzbhydra.conf ]]; then
     cat > /etc/nginx/apps/nzbhydra.conf << RAD
 location /nzbhydra {
   include /etc/nginx/snippets/proxy.conf;
-  proxy_pass        http://127.0.0.1:5076\$request_uri;
-#  auth_basic "What's the password?";
-#  auth_basic_user_file /etc/htpasswd.d/htpasswd.${user};
+  proxy_pass        http://127.0.0.1:5076/nzbhydra;
+  auth_basic "What's the password?";
+  auth_basic_user_file /etc/htpasswd.d/htpasswd.${user};
 }
 RAD
 fi
-#sed -i "s/urlBase.*/urlBase: \"\/nzbhydra\"/g" /home/${user}/.config/nzbhydra2/nzbhydra.yml
+sed -i "s/urlBase.*/urlBase: \"\/nzbhydra\"/g" /home/${user}/.config/nzbhydra2/nzbhydra.yml
 sed -i "s/host: \"0.0.0.0\"/host: \"127.0.0.1\"/g" /home/${user}/.config/nzbhydra2/nzbhydra.yml
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /auth_basic/d;
+    /auth_basic_user_file/d;
+    s| {|/ {\
+    auth_request /subdomain-auth;|;
+    s|/nzbhydra;|$request_uri;|
+    ' /etc/nginx/apps/nzbhydra.conf
+    sed -i "s/urlBase.*/urlBase: \"\"/g" /home/${user}/.config/nzbhydra2/nzbhydra.yml
+fi
+
 if [[ $active == "active" ]]; then
     systemctl start nzbhydra
 fi

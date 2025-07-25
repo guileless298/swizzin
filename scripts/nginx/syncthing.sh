@@ -12,13 +12,25 @@ MASTER=$(cut -d: -f1 < /root/.master.info)
 if [[ ! -f /etc/nginx/apps/syncthing.conf ]]; then
     cat > /etc/nginx/apps/syncthing.conf << SYNC
 location /syncthing/ {
-  proxy_pass              http://127.0.0.1:8384\$request_uri;
+  proxy_pass              http://127.0.0.1:8384/;
   proxy_set_header        Host \$proxy_host;
   proxy_set_header        X-Real-IP \$remote_addr;
   proxy_set_header        X-Forwarded-For \$proxy_add_x_forwarded_for;
   proxy_set_header        X-Forwarded-Proto \$scheme;
-#  auth_basic "What's the password?";
-#  auth_basic_user_file /etc/htpasswd.d/htpasswd.${MASTER};
+  auth_basic "What's the password?";
+  auth_basic_user_file /etc/htpasswd.d/htpasswd.${MASTER};
 }
 SYNC
+fi
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /proxy_pass/d;
+    /auth_basic/d;
+    /auth_basic_user_file/d;
+    s|{|{\
+    auth_request /subdomain-auth;
+    proxy_pass              http://127.0.0.1:8384$request_uri;|
+    ' /etc/nginx/apps/syncthing.conf
 fi

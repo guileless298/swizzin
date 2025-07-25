@@ -8,12 +8,14 @@ users=($(_get_user_list))
 
 cat > /etc/nginx/apps/autobrr.conf << 'AUTOBRR'
 location /autobrr/ {
-    proxy_pass              http://$remote_user.autobrr\$request_uri;
+    proxy_pass              http://$remote_user.autobrr;
     proxy_http_version      1.1;
     proxy_set_header        X-Forwarded-Host        $http_host;
 
-#    auth_basic "What's the password?";
-#    auth_basic_user_file /etc/htpasswd;
+    auth_basic "What's the password?";
+    auth_basic_user_file /etc/htpasswd;
+
+    rewrite ^/autobrr/(.*) /$1 break;
 }
 AUTOBRR
 
@@ -33,3 +35,16 @@ AUTOBRRUC
     systemctl try-restart autobrr@${user}
 
 done
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /proxy_pass/d;
+    /auth_basic/d;
+    /auth_basic_user_file/d;
+    /rewrite/d;
+    s|{|{\
+    auth_request /subdomain-auth;\
+    proxy_pass              http://$upstream_http_x_remote_user.autobrr$request_uri;|
+    ' /etc/nginx/apps/autobrr.conf
+fi

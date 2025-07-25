@@ -14,9 +14,9 @@ if [[ ! -f /etc/nginx/apps/shell.conf ]]; then
     cat > /etc/nginx/apps/shell.conf << RAD
 location /shell/ {
   include /etc/nginx/snippets/proxy.conf;
-  proxy_pass        http://127.0.0.1:4200\$request_uri;
-#  auth_basic "What's the password?";
-#  auth_basic_user_file /etc/htpasswd.d/htpasswd.${MASTER};
+  proxy_pass        http://127.0.0.1:4200;
+  auth_basic "What's the password?";
+  auth_basic_user_file /etc/htpasswd.d/htpasswd.${MASTER};
 }
 RAD
 fi
@@ -25,6 +25,17 @@ if [[ -z $(grep disable-ssl /etc/default/shellinabox) ]]; then
 fi
 if [[ -z $(grep localhost-only /etc/default/shellinabox) ]]; then
     sed -i 's/SHELLINABOX_ARGS="/SHELLINABOX_ARGS="--localhost-only /g' /etc/default/shellinabox
+fi
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /auth_basic/d;
+    /auth_basic_user_file/d;
+    s|{|{\
+    auth_request /subdomain-auth;|;
+    s|:4200;|:4200$request_uri;|
+    ' /etc/nginx/apps/shell.conf
 fi
 
 if [[ $isactive == "active" ]]; then

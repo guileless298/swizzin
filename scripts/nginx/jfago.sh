@@ -3,7 +3,7 @@
 # Create our nginx application conf for jfa-go
 cat > /etc/nginx/apps/jfago.conf <<- NGINXCONF
 location ^~ /jfa-go {
-    proxy_pass http://localhost:8056\$request_uri;
+    proxy_pass http://localhost:8056/jfa-go;
 
     http2_push_preload on;
 
@@ -16,3 +16,11 @@ location ^~ /jfa-go {
     proxy_buffering off;
 }
 NGINXCONF
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    s| {|/ {|;
+    s|/jfa-go;|$request_uri;|
+    ' /etc/nginx/apps/jfago.conf
+fi

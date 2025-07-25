@@ -27,3 +27,11 @@ location / {
   proxy_set_header Connection "Upgrade";
 }
 EON
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    s|/ {|/panel/ {|;
+    s|:8333;|:8333$request_uri;|
+    ' /etc/nginx/apps/panel.conf
+fi

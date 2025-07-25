@@ -13,12 +13,13 @@ user="$PROWLARR_OWNER"
 app_port="9696"
 app_sslport="9797"
 app_configdir="/home/$user/.config/${app_name^}"
+app_baseurl="$app_name"
 app_servicefile="${app_name}.service"
 app_branch="develop"
 
 cat > /etc/nginx/apps/$app_name.conf << ARRNGINX
-location ^~ /$app_name {
-    proxy_pass http://127.0.0.1:$app_port\$request_uri;
+location ^~ /$app_baseurl {
+    proxy_pass http://127.0.0.1:$app_port;
     proxy_set_header Host \$host;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Host \$host;
@@ -28,13 +29,13 @@ location ^~ /$app_name {
     proxy_set_header Upgrade \$http_upgrade;
     proxy_set_header Connection \$http_connection;
 
-#    auth_basic "What's the password?";
-#    auth_basic_user_file /etc/htpasswd.d/htpasswd.${master};
+    auth_basic "What's the password?";
+    auth_basic_user_file /etc/htpasswd.d/htpasswd.${master};
 }
 # Allow the API/Indexer External Access via NGINX
-location ^~ /$app_name(/[0-9]+)?/api {
+location ^~ /$app_baseurl(/[0-9]+)?/api {
     auth_request off;
-    proxy_pass http://127.0.0.1:$app_port\$request_uri;
+    proxy_pass http://127.0.0.1:$app_port;
 }
 ARRNGINX
 
@@ -46,7 +47,6 @@ if [[ $wasActive == "active" ]]; then
 fi
 
 apikey=$(grep -oPm1 "(?<=<ApiKey>)[^<]+" "$app_configdir"/config.xml)
-urlBase=$(grep -oPm1 "(?<=<UrlBase>)[^<]+" "$app_configdir"/config.xml)
 
 # Set to Debug as this is alpha software
 # ToDo: Logs back to Info
@@ -61,12 +61,24 @@ cat > "$app_configdir"/config.xml << ARRCONFIG
   <LaunchBrowser>False</LaunchBrowser>
   <ApiKey>${apikey}</ApiKey>
   <AuthenticationMethod>None</AuthenticationMethod>
-  <UrlBase>${urlBase}</UrlBase>
+  <UrlBase>$app_baseurl</UrlBase>
   <Branch>$app_branch</Branch>
 </Config>
 ARRCONFIG
 
 chown -R "$user":"$user" "$app_configdir"
+
+if [[ -f /install/.subdomain.lock ]]; then
+    sed -Ei "
+    /proxy_pass/d;
+    /auth_basic/d;
+    /auth_basic_user_file/d;
+    s| {|/ {\
+    auth_request /subdomain-auth;
+    proxy_pass http://127.0.0.1:$app_port\$request_uri;|
+    " /etc/nginx/apps/$app_name.conf
+    sed "s|<UrlBase>$app_baseurl</UrlBase>|<UrlBase />|" -i "$app_configdir"/config.xml
+fi
 
 # Switch app back off if it was dead before; otherwise start it
 if [[ $wasActive == "active" ]]; then

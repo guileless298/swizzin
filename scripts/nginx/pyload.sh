@@ -8,25 +8,38 @@
 #   changes/dates in source files. Any modifications to our software
 #   including (via compiler) GPL-licensed code must also be made available
 #   under the GPL along with build & install instructions.
-path_prefix=$(grep -oPm1 "(?<=\"Path prefix\" = ?)/[a-zA-Z0-9/]+" "$app_configdir"/config.xml)
-
 user=$(cut -d: -f1 < /root/.master.info)
 if [[ ! -f /etc/nginx/apps/pyload.conf ]]; then
     cat > /etc/nginx/apps/pyload.conf << PYLOAD
 location /pyload/ {
   include /etc/nginx/snippets/proxy.conf;
-  proxy_pass http://127.0.0.1:8000\$request_uri;
+  proxy_pass http://127.0.0.1:8000/;
   proxy_set_header Accept-Encoding "";
   sub_filter_types text/css text/xml text/javascript;
-  sub_filter '/media/' '${path_prefix}/media/';
-  sub_filter '/json/' '${path_prefix}/json/';
-  sub_filter '/api/' '${path_prefix}/api/';
-  sub_filter '<a href="/' '<a href="${path_prefix}/';
+  sub_filter '/media/' '/pyload/media/';
+  sub_filter '/json/' '/pyload/json/';
+  sub_filter '/api/' '/pyload/api/';
+  sub_filter '<a href="/' '<a href="/pyload/';
   sub_filter_once off;
-#  auth_basic "What's the password?";
-#  auth_basic_user_file /etc/htpasswd.d/htpasswd.${user};
+  auth_basic "What's the password?";
+  auth_basic_user_file /etc/htpasswd.d/htpasswd.${user};
 }
 PYLOAD
-    #sed -i 's/"Path prefix" = /"Path prefix" = \/pyload/g' /opt/pyload/pyload.conf
+    sed -i 's/"Path prefix" = /"Path prefix" = \/pyload/g' /opt/pyload/pyload.conf
     sed -i 's/"IP" = 0.0.0.0/"IP" = 127.0.0.1/g' /opt/pyload/pyload.conf
+fi
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /auth_basic/d;
+    /auth_basic_user_file/d;
+    /sub_filter_types/d;
+    /sub_filter/d;
+    /sub_filter_once/d;
+    s|{|{\
+    auth_request /subdomain-auth;|;
+    s|:8000/;|:8000$request_uri;|
+    ' /etc/nginx/apps/pyload.conf
+    sed -i 's/"Path prefix" = /"Path prefix" =/g' /opt/pyload/pyload.conf
 fi

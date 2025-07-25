@@ -5,12 +5,29 @@ location /calibrecs/ {
     proxy_buffering         off;
     proxy_pass              http://127.0.0.1:8089\$request_uri;
     proxy_set_header X-Forwarded-For \$remote_addr;
-#    auth_basic              "What's the password?";
-#    auth_basic_user_file    /etc/htpasswd;
+    auth_basic              "What's the password?";
+    auth_basic_user_file    /etc/htpasswd;
+}
+location /calibrecs {
+    # we need a trailing slash for the Application Cache to work
+    rewrite                 /calibrecs /calibrecs/ permanent;
 }
 EOF
 
-sed '/ExecStart=/ s/$/ --listen-on 127.0.0.1 --enable-local-write/' -i /etc/systemd/system/calibrecs.service
+sed '/ExecStart=/ s/$/ --listen-on 127.0.0.1 --url-prefix \/calibrecs --enable-local-write/' -i /etc/systemd/system/calibrecs.service
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /proxy_pass/d;
+    /auth_basic/d;
+    /auth_basic_user_file/d;
+    /location \/calibrecs {/,/}/d;
+    s|{|{\
+    auth_request /subdomain-auth;|
+    ' /etc/nginx/apps/bazarr.conf
+    sed -i 's| --url-prefix /calibrecs||' /etc/systemd/system/calibrecs.service
+fi
 
 systemctl daemon-reload
 systemctl try-restart calibrecs

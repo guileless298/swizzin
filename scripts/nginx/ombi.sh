@@ -10,8 +10,11 @@
 #   under the GPL along with build & install instructions.
 
 cat > /etc/nginx/apps/ombi.conf << 'RAD'
+location /ombi {
+     return 301 $scheme://$host/ombi/;
+}
 location ^~ /ombi/ {
-    proxy_pass http://127.0.0.1:3000\$request_uri;
+    proxy_pass http://127.0.0.1:3000/ombi/;
     proxy_pass_header Server;
     proxy_set_header Host $http_host;
     proxy_set_header X-Forwarded-Host $server_name;
@@ -25,6 +28,11 @@ location ^~ /ombi/ {
     proxy_http_version 1.1;
     proxy_redirect off;
 }
+
+if ($http_referer ~* /ombi/) {
+    rewrite ^/dist/(.*) $scheme://$host/ombi/dist/$1 permanent;
+    rewrite ^/images/(.*) $scheme://$host/ombi/images/$1 permanent;
+}
 RAD
 
 status=$(systemctl is-active ombi)
@@ -36,8 +44,22 @@ mkdir -p /etc/systemd/system/ombi.service.d
 cat > /etc/systemd/system/ombi.service.d/override.conf << CONF
 [Service]
 ExecStart=
-ExecStart=/opt/Ombi/Ombi --host http://127.0.0.1:3000 --storage /etc/Ombi
+ExecStart=/opt/Ombi/Ombi --baseurl /ombi --host http://127.0.0.1:3000 --storage /etc/Ombi
 CONF
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /location \/ombi {/,/}/d;
+    /proxy_pass/d;
+    /if (/,/}/d;
+    s|{|{\
+    auth_request /subdomain-auth;
+    proxy_pass http://127.0.0.1:3000$request_uri;|
+    ' /etc/nginx/apps/ombi.conf
+    sed -i 's/ --baseurl /ombi//g' /etc/systemd/system/ombi.service.d/override.conf
+fi
+
 systemctl daemon-reload
 
 if [[ $status = "active" ]]; then

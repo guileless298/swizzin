@@ -3,7 +3,11 @@
 # A functions for reused commands.
 function reused_commands() {
     sed -iE 's|<LocalNetworkAddresses />|<LocalNetworkAddresses>\n    <string>127.0.0.1</string>\n  </LocalNetworkAddresses>|g' -i /etc/jellyfin/network.xml
-    #sed -r 's#<BaseUrl />#<BaseUrl>/jellyfin</BaseUrl>#g' -i /etc/jellyfin/network.xml
+    if [[ -f /install/.subdomain.lock ]]; then
+        sed 's|<BaseUrl>/jellyfin</BaseUrl>|<BaseUrl />|g' -i /etc/jellyfin/network.xml
+    else
+        sed 's|<BaseUrl />|<BaseUrl>/jellyfin</BaseUrl>|g' -i /etc/jellyfin/network.xml
+    fi
 }
 #
 # Do this for jellyfin if is not already installed
@@ -23,7 +27,7 @@ fi
 # Create our nginx application conf for jellyfin
 cat > /etc/nginx/apps/jellyfin.conf <<- NGINXCONF
 	location /jellyfin {
-		proxy_pass https://127.0.0.1:8920\$request_uri;
+		proxy_pass https://127.0.0.1:8920;
 		#
 		proxy_pass_request_headers on;
 		#
@@ -47,3 +51,8 @@ cat > /etc/nginx/apps/jellyfin.conf <<- NGINXCONF
 		auth_basic                              off;
 	}
 NGINXCONF
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -i 's/:8920;/:8920$request_uri;/' /etc/nginx/apps/jellyfin.conf
+fi

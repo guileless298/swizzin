@@ -4,19 +4,27 @@ username="$(cut -d: -f1 < /root/.master.info)"
 #
 if [[ -n "$1" && ! -f /install/.filebrowser.lock ]]; then
     port="$1"
-    "/home/${username}/bin/filebrowser" config set -a "127.0.0.1" -b "/filebrowser" -d "/home/${username}/.config/Filebrowser/filebrowser.db" > /dev/null 2>&1
+    if [[ -f /install/.subdomain.lock ]]; then
+        "/home/${username}/bin/filebrowser" config set -a "127.0.0.1" -d "/home/${username}/.config/Filebrowser/filebrowser.db" > /dev/null 2>&1
+    else
+        "/home/${username}/bin/filebrowser" config set -a "127.0.0.1" -b "/filebrowser" -d "/home/${username}/.config/Filebrowser/filebrowser.db" > /dev/null 2>&1
+    fi
 fi
 #
 if [[ -z "$1" && -f /install/.filebrowser.lock ]]; then
     systemctl stop filebrowser
     port="$("/home/${username}/bin/filebrowser" config cat -d "/home/${username}/.config/Filebrowser/filebrowser.db" | grep 'Port:' | awk '{ print $2 }')"
-    "/home/${username}/bin/filebrowser" config set -a "127.0.0.1" -b "/filebrowser" -d "/home/${username}/.config/Filebrowser/filebrowser.db" > /dev/null 2>&1
+    if [[ -f /install/.subdomain.lock ]]; then
+        "/home/${username}/bin/filebrowser" config set -a "127.0.0.1" -d "/home/${username}/.config/Filebrowser/filebrowser.db" > /dev/null 2>&1
+    else
+        "/home/${username}/bin/filebrowser" config set -a "127.0.0.1" -b "/filebrowser" -d "/home/${username}/.config/Filebrowser/filebrowser.db" > /dev/null 2>&1
+    fi
     systemctl start filebrowser
 fi
 #
 cat > /etc/nginx/apps/filebrowser.conf <<- NGINGCONF
 	location /filebrowser {
-	    proxy_pass https://127.0.0.1:${port}\$request_uri;
+	    proxy_pass https://127.0.0.1:${port}/filebrowser;
 	    #
 	    proxy_pass_request_headers on;
 	    #
@@ -40,3 +48,11 @@ cat > /etc/nginx/apps/filebrowser.conf <<- NGINGCONF
 	    auth_basic off;
 	}
 NGINGCONF
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /proxy_rewrite/d;
+    s|/filebrowser;|$request_uri;|
+    ' /etc/nginx/apps/filebrowser.conf
+fi

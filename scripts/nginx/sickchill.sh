@@ -18,14 +18,27 @@ if [[ ! -f /etc/nginx/apps/sickchill.conf ]]; then
     cat > /etc/nginx/apps/sickchill.conf << SRC
 location /sickchill {
     include /etc/nginx/snippets/proxy.conf;
-    proxy_pass        http://127.0.0.1:8081\$request_uri;
-#    auth_basic "What's the password?";
-#    auth_basic_user_file /etc/htpasswd.d/htpasswd.${user};
+    proxy_pass        http://127.0.0.1:8081/sickchill;
+    auth_basic "What's the password?";
+    auth_basic_user_file /etc/htpasswd.d/htpasswd.${user};
 }
 SRC
 fi
-#sed -i "s/web_root.*/web_root = \/sickchill/g" /opt/sickchill/config.ini
+sed -i "s/web_root.*/web_root = \/sickchill/g" /opt/sickchill/config.ini
 sed -i "s/web_host.*/web_host = 127.0.0.1/g" /opt/sickchill/config.ini
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /auth_basic/d;
+    /auth_basic_user_file/d;
+    s| {|/ {\
+    auth_request /subdomain-auth;|;
+    s|/sickchill;|$request_uri;|
+    ' /etc/nginx/apps/sickchill.conf
+    sed -i "s/web_root.*/web_root =/g" /opt/sickchill/config.ini
+fi
+
 if [[ $isactive == "active" ]]; then
     systemctl start sickchill
 fi

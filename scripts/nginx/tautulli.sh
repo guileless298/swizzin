@@ -16,17 +16,29 @@ fi
 if [[ ! -f /etc/nginx/apps/tautulli.conf ]]; then
     cat > /etc/nginx/apps/tautulli.conf << RAD
 location /plexpy {
-  return 301 \$scheme://tautulli.\$maindomain\$request_uri;
+  return 301 /tautulli/;
 }
+
 
 location /tautulli {
   include /etc/nginx/snippets/proxy.conf;
-  proxy_pass        http://127.0.0.1:8181\$request_uri;
+  proxy_pass        http://127.0.0.1:8181/tautulli;
 }
 RAD
 fi
-#sed -i "s/http_root.*/http_root = \"tautulli\"/g" /opt/tautulli/config.ini
+sed -i "s/http_root.*/http_root = \"tautulli\"/g" /opt/tautulli/config.ini
 sed -i "s/http_host.*/http_host = 127.0.0.1/g" /opt/tautulli/config.ini
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    s| {|/ {|g;
+    s|/tautulli/;|$scheme://tautulli.$matched_domain$request_uri;|;
+    s|/tautulli;|$request_uri;|
+    ' /etc/nginx/apps/tautulli.conf
+    sed -i "s/http_root.*/http_root = \"\"/g" /opt/tautulli/config.ini
+fi
+
 if [[ $isactive == "active" ]]; then
     systemctl start tautulli
 fi

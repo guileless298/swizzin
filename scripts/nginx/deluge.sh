@@ -19,8 +19,8 @@ if [[ ! -f /etc/nginx/apps/dindex.conf ]]; then
 location /deluge.downloads {
   alias /home/\$remote_user/torrents/deluge;
   include /etc/nginx/snippets/fancyindex.conf;
-#  auth_basic "What's the password?";
-#  auth_basic_user_file /etc/htpasswd;
+  auth_basic "What's the password?";
+  auth_basic_user_file /etc/htpasswd;
 
   location ~* \.php$ {
 
@@ -55,12 +55,31 @@ DUPS
 
     if [[ ! -f /etc/nginx/apps/deluge.conf ]]; then
         cat > /etc/nginx/apps/deluge.conf << 'DRP'
+location /deluge {
+  return 301 /deluge/;
+}
+
 location /deluge/ {
   include /etc/nginx/snippets/proxy.conf;
-#  auth_basic "What's the password?";
-#  auth_basic_user_file /etc/htpasswd;
-  proxy_pass http://$remote_user.deluge\$request_uri;
+  auth_basic "What's the password?";
+  auth_basic_user_file /etc/htpasswd;
+  proxy_set_header X-Deluge-Base "/deluge/";
+  rewrite ^/deluge/(.*) /$1 break;
+  proxy_pass http://$remote_user.deluge;
 }
 DRP
+        if [[ -f /install/.subdomain.lock ]]; then
+            # shellcheck disable=SC2016
+            sed -Ei '
+            /auth_basic/d;
+            /auth_basic_user_file/d;
+            /X-Deluge-Base/d;
+            /rewrite/d;
+            /location \/deluge {/,/}/d;
+            s|{|{\
+            auth_request /subdomain-auth;|;
+            s|$remote_user.deluge;|$upstream_http_x_remote_user.deluge$request_uri;|
+            ' /etc/nginx/apps/deluge.conf
+        fi
     fi
 done
