@@ -21,10 +21,6 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
 /root \/srv\/;/,/include/{//!d;};
 /root \/srv\/;/a\\
   \\
-  location ~ ^/(?<service>[a-z]+)$ {\\
-    return 301 \$scheme://\$service.\$matched_domain/;\\
-  }\\
-  \\
   location = /subdomain-auth {\\
     internal;\\
     proxy_pass http://127.0.0.1:8888/validate;\\
