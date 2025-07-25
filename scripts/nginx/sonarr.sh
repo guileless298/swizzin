@@ -77,14 +77,14 @@ ARRCONFIG
 chown -R "$user":"$user" "$app_configdir"
 
 if [[ -f /install/.subdomain.lock ]]; then
-    sed -Ei "
+    sed -Ei '
     s|auth_basic off;|auth_request off;|;
     /auth_basic/d;
     /auth_basic_user_file/d;
-    s| {|/ {\\
+    s| {|/ {
     auth_request /subdomain-auth;|;
     s|:$app_port;|:$app_port\$request_uri;|
-    " /etc/nginx/apps/$app_name.conf
+    ' /etc/nginx/apps/$app_name.conf
     sed "s|<UrlBase>$app_baseurl</UrlBase>|<UrlBase />|" -i "$app_configdir"/config.xml
 fi
 
