@@ -43,7 +43,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /auth_basic/d;
     /auth_basic_user_file/d;
     /rewrite/d;
-    0,/location \/autobrr\/ {/a\
+    0,/location \/autobrr\/ \{/a\
     auth_request /subdomain-auth;\
     proxy_pass              http://$upstream_http_x_remote_user.autobrr$request_uri;|
     ' /etc/nginx/apps/autobrr.conf
