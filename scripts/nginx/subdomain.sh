@@ -8,13 +8,13 @@ sed -Ei "
 1i\\
 map \$host \$matched_subdomain {\\
     ~^[0-9]\\..+$ \"panel\";\\
-    ~^(?<matched_subdomain>[^.]+)\\..+$ \$matched_subdomain;\\
+    ~^([^.]+)\\..+$ \$1;\\
     default \"panel\";\\
 }\\
 \\
 map \$host \$matched_domain {\\
     ~^[0-9]\\..+$ \$host;\\
-    ~^[^.]+\\.(?<matched_domain>.+)$ \$matched_domain;\\
+    ~^[^.]+\\.(.+)$ \$1;\\
     default \$host;\\
 }\\
 
@@ -23,7 +23,7 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
 /root \/srv\/;/a\\
   \\
   location ~ ^/(?<service>[a-z]+)$ {\\
-    return 301 \$scheme://\$service.\$matched_domain\$request_uri;\\
+    return 301 \$scheme://\$service.\$matched_domain/;\\
   }\\
   \\
   location = /subdomain-auth {\\
