@@ -75,7 +75,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*proxy_pass/ s|:$app_port;|:$app_port\$request_uri;|;
     s|^location \^~ |location |;
     s|^location /$app_baseurl \{|location /$app_baseurl/ {\\
-    auth_request /subdomain-auth|
+    auth_request /subdomain-auth;|
     " /etc/nginx/apps/$app_name.conf
     sed "s|<UrlBase>$app_baseurl</UrlBase>|<UrlBase />|" -i "$app_configdir"/config.xml
 fi
