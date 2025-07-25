@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 # shellcheck disable=SC2016
 sed -Ei '
 /listen 443/,/^}/ s|server_name .*;|server_name ~^(?:(?<matched_subdomain>[^.]*)\.)?(?<matched_domain>.+)$|g;
