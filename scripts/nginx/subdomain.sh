@@ -16,7 +16,8 @@ map \$host \$matched_domain {\\
     ~^[0-9]\..+$ \$host;\\
     ~^[^.]+\.(?<matched_domain>.+)$ \$matched_domain;\\
     default \$host;\\
-}
+}\\
+
 s|server_name .*;|server_name $hostname *.$hostname;|g;
 /root \/srv\/;/,/include/{//!d;};
 /root \/srv\/;/a\\
