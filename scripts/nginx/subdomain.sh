@@ -1,7 +1,7 @@
 #!/bin/bash
 
 hostname=$(grep -m1 "server_name" /etc/nginx/sites-enabled/default | awk '{print $2}' | sed 's/;//g' | sed 's/\./\\./g')
-escaped_hostname=${hostname//./\.};
+escaped_hostname=${hostname//./\\.};
 
 sed -Ei "
 /map \$host \$matched_subdomain/,/}/d;
@@ -13,7 +13,7 @@ map \$host \$matched_subdomain {\\
 }\\
 \\
 map \$host \$matched_domain {\\
-    ~^[^.]+\\\\.$escaped_hostname\$ \"$escaped_hostname\";\\
+    ~^[^.]+\\\\.$escaped_hostname\$ \"$hostname\";\\
     default \$host;\\
 }\\
 
