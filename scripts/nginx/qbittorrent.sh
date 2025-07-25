@@ -22,11 +22,11 @@ fi
 if [[ ! -f /etc/nginx/apps/qbittorrent.conf ]]; then
     cat > /etc/nginx/apps/qbittorrent.conf << 'QBTN'
 location /qbt {
-  return 301 \$scheme://qbittorrent.\$maindomain\$request_uri;
+  return 301 $scheme://qbittorrent.$maindomain$request_uri;
 }
 
 location /qbittorrent/ {
-    proxy_pass              http://$remote_user.qbittorrent\$request_uri;
+    proxy_pass              http://$remote_user.qbittorrent$request_uri;
     proxy_http_version      1.1;
     proxy_set_header        X-Forwarded-Host        $http_host;
     http2_push_preload on; # Enable http2 push
