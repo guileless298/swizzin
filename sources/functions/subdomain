@@ -5,7 +5,7 @@ function install_auth_server() {
     cat > /opt/subdomain-auth/requirements.txt << REQ
 flask
 requests
-jwt
+pyjwt
 passlib
 REQ
 

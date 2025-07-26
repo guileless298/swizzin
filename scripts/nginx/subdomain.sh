@@ -40,7 +40,7 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
   \\
   error_page 401 = @auth_failure;\\
   location @auth_failure {\\
-    return 302 \$scheme://\$matched_domain/login/\$matched_subdomain/\$request_uri;\\
+    return 302 \$scheme://\$matched_domain/login/\$matched_subdomain\$request_uri;\\
   }\\
   \\
   rewrite ^/ \"/\$matched_subdomain\$uri\" break;\\
