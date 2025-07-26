@@ -55,6 +55,10 @@ def check_htpasswd(htpasswd_path, username, password):
     except Exception:
         return False
 
+@app.route("/logout")
+def logout(path):
+    return
+
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def endpoint(path):
@@ -125,4 +129,29 @@ if __name__ == "__main__":
     app.run()
 
 WSGI
+
+    cat > /opt/subdomain-auth/logout.html << LOGOUT
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Logging out…</title>
+  <script>
+    window.onload = function () {
+      const iframe = document.createElement("iframe");
+      iframe.src = "/logout";
+      iframe.style.display = "none";
+      document.body.appendChild(iframe);
+
+      setTimeout(() => {
+        window.location.href = "/"; // Redirect after logout attempt
+      }, 1000);
+    };
+  </script>
+</head>
+<body>
+  <p>Logging out…</p>
+</body>
+</html>
+LOGOUT
 }
