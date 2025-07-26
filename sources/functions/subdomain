@@ -58,13 +58,16 @@ def check_htpasswd(htpasswd_path, username, password):
     except Exception:
         return False
 
-@app.route("/", defaults={"service": None, "path": ""})
-@app.route("/<service>/", defaults={"path": ""})
-@app.route("/<service>/<path:path>")
-def endpoint(service, path):
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def endpoint(path):
     htpasswd_path = request.headers.get("X-Auth-Path")
     if htpasswd_path is not None:
         return verify(htpasswd_path)
+
+    parts = path.split("/", 1)
+    service = parts[0]
+    path = parts[1] if len(parts) == 2 else ""
     return login(service, path)
 
 def verify(htpasswd_path):
@@ -108,7 +111,7 @@ def login(service, path):
         resp = requests.get(PANEL_URL)
         if resp.status_code == 200:
             return Response(resp.content, 401)
-    except requests.RequestException as e:
+    except requests.RequestException:
         pass
 
     return Response("Authentication required", 401, {"WWW-Authenticate": 'Basic realm="Restricted Area"'})
