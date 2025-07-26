@@ -49,9 +49,6 @@ def decode_jwt(token):
         return None, None
 
 def check_htpasswd(htpasswd_path, username, password):
-    if not htpasswd_path:
-        htpasswd_path = DEFAULT_HTPASSWD
-
     try:
         htpasswd = HtpasswdFile(htpasswd_path)
         return htpasswd.check_password(username, password)
