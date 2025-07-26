@@ -77,7 +77,7 @@ def verify(htpasswd_path):
         return "", 401
 
     if check_htpasswd(htpasswd_path, username, password):
-        return "", 204, "X-Remote-User": username}
+        return "", 204, {"X-Remote-User": username}
     elif check_htpasswd(DEFAULT_HTPASSWD, username, password):
         return "", 403
     else:
