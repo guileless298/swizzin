@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#shellcheck source=sources/functions/subdomain
+. /etc/swizzin/sources/functions/subdomain
+
 hostname=$(grep -m1 "server_name" /etc/nginx/sites-enabled/default | awk '{print $2}' | sed 's/;//g')
 escaped_hostname=${hostname//./\\\\.};
 
@@ -49,3 +52,5 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
   }\\
 
 " /etc/nginx/sites-enabled/default
+
+install_auth_server
