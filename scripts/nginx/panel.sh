@@ -31,6 +31,7 @@ EON
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
+    /^location ~/,/^\}$/d;
     s|^location / \{|location /panel/ {|;
     /^[[:space:]]*proxy_pass/ s|:8333;|:8333$request_uri;|;
     1i\

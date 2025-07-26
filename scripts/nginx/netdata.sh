@@ -42,14 +42,15 @@ sed -i "s/# bind to = \*/bind to = 127.0.0.1/g" /etc/netdata/netdata.conf
 
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
-    sed -Ei '
-    /^location \/netdata \{/,/^\}$/d;
+    sed -Ei "
+    /^location \/netdata \{/,/^\}\$/d;
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
-    /^[[:space:]]*proxy_pass/ s|/$ndpath$is_args$args;|$request_uri;|;
-    s|^location ~ /netdata/\(\?<ndpath>\.\*\) \{|location /netdata/ {
-  auth_request /subdomain-auth;|
-    ' /etc/nginx/apps/netdata.conf
+    /^[[:space:]]*proxy_pass/ s|/\$ndpath\$is_args\$args;|\$request_uri;|;
+    s|^location ~ /netdata/\(\?<ndpath>\.\*\) \{|location /netdata/ {\\
+  set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${user}\";\\
+  auth_request @auth;|
+    " /etc/nginx/apps/netdata.conf
 fi
 
 if [[ $isactive == "active" ]]; then

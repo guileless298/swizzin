@@ -44,6 +44,6 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*rewrite/d;
     /^[[:space:]]*proxy_pass/ s|$remote_user.autobrr;|$upstream_http_x_remote_user.autobrr$request_uri;|;
     /^location \/autobrr\/ \{/a\
-    auth_request /subdomain-auth;
+    auth_request @auth;
     ' /etc/nginx/apps/autobrr.conf
 fi

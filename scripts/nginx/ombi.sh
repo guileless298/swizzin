@@ -53,8 +53,8 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^location \/ombi \{/,/^\}$/d;
     /^if \(/,/^\}$/d;
     /^[[:space:]]*proxy_pass/ s|/ombi/;|$request_uri;|;
-    s|^location \^~ /ombi/ \{|location /ombi/ {
-    auth_request /subdomain-auth;|
+    s|^location \^~ /ombi/ \{|location /ombi/ {\
+    auth_request @auth;|
     ' /etc/nginx/apps/ombi.conf
     sed -i 's/ --baseurl /ombi//g' /etc/systemd/system/ombi.service.d/override.conf
 fi

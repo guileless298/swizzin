@@ -30,13 +30,14 @@ sed -i "s/host: \"0.0.0.0\"/host: \"127.0.0.1\"/g" /home/${user}/.config/nzbhydr
 
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
-    sed -Ei '
+    sed -Ei "
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
     /^[[:space:]]*proxy_pass/ s|/nzbhydra;|$request_uri;|;
-    s|^location /nzbhydra \{|location /nzbhydra/ {\
-  auth_request /subdomain-auth;|
-    ' /etc/nginx/apps/nzbhydra.conf
+    s|^location /nzbhydra \{|location /nzbhydra/ {\\
+  set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${user}\";\\
+  auth_request @auth;|
+    " /etc/nginx/apps/nzbhydra.conf
     sed -i "s/urlBase.*/urlBase: \"\"/g" /home/${user}/.config/nzbhydra2/nzbhydra.yml
 fi
 

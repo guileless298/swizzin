@@ -34,14 +34,15 @@ sed -i "s/\"BasePathOverride.*/\"BasePathOverride\": \"\/jackett\",/g" /home/${M
 
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
-    sed -Ei '
-    /^location \/jackett \{/,/^\}$/d;
+    sed -Ei "
+    /^location \/jackett \{/,/^\}\$/d;
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
-    /^[[:space:]]*proxy_pass/ s|/jacket/;|$request_uri;|;
-    /^location \/jackett\/ \{/a\
-  auth_request /subdomain-auth;
-    ' /etc/nginx/apps/jackett.conf
+    /^[[:space:]]*proxy_pass/ s|/jacket/;|\$request_uri;|;
+    /^location \/jackett\/ \{/a\\
+  set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${MASTER}\";\\
+  auth_request @auth;
+    " /etc/nginx/apps/jackett.conf
     sed -i "s/\"BasePathOverride.*/\"BasePathOverride\": \"\",/g" /home/${MASTER}/.config/Jackett/ServerConfig.json
 fi
 

@@ -1,0 +1,123 @@
+#!/bin/bash
+
+function install_auth_server() {
+    hostname=$(grep -m1 "server_name" /etc/nginx/sites-enabled/default | awk '{print $2}' | sed 's/;//g' | sed 's/\./\\./g')
+    cat > /opt/subdomain-auth/requirements.txt << REQ
+flask
+requests
+jwt
+passlib
+REQ
+
+    cat > /opt/subdomain-auth/auth.py << AUTH
+#!/usr/bin/env python
+
+from flask import Flask, request, redirect, make_response, Response
+from passlib.apache import HtpasswdFile
+import jwt
+import os
+import base64
+import requests
+
+app = Flask(__name__)
+DEFAULT_HTPASSWD = "/etc/htpasswd"
+COOKIE_NAME = "subdomain_auth"
+COOKIE_DOMAIN = "$hostname"
+PANEL_URL = "http://127.0.0.1:8333/login"
+
+with open(".secret") as f:
+    SECRET_KEY = f.read()
+
+def extract_basic_auth(auth_header):
+    try:
+        b64 = auth_header.split(" ", 1)[1]
+        decoded = base64.b64decode(b64).decode()
+        return decoded.split(":", 1)
+    except Exception:
+        return None, None
+
+def create_jwt(username, password):
+    return jwt.encode({"user": username, "password": password}, SECRET_KEY, algorithm="HS256")
+
+def decode_jwt(token):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        username = payload["user"]
+        password = payload["password"]
+        return username, password
+    except Exception:
+        return None, None
+
+def check_htpasswd(htpasswd_path, username, password):
+    if not htpasswd_path:
+        htpasswd_path = DEFAULT_HTPASSWD
+
+    try:
+        htpasswd = HtpasswdFile(htpasswd_path)
+        return htpasswd.check_password(username, password)
+    except Exception:
+        return False
+
+@app.route("/verify")
+def verify():
+    token = request.cookies.get(COOKIE_NAME)
+    if not token:
+        return Response("Unauthorized", status=401)
+
+    username, password = decode_jwt(token)
+    if not username:
+        return Response("Unauthorized", status=401)
+
+    htpasswd_path = request.headers.get("X-Auth-Path")
+    if check_htpasswd(htpasswd_path, username, password):
+        return Response("OK", status=200, headers={"X-Remote-User": username})
+    elif check_htpasswd(DEFAULT_HTPASSWD, username, password):
+        return Response("Unauthorized", status=401)
+    else:
+        return Response("Forbidden", status=403)
+
+@app.route("/login", defaults={'service': None, 'path': None})
+@app.route("/login/<service>/<path>")
+def subdomain_auth(service, path):
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.lower().startswith("basic "):
+        username, password = extract_basic_auth(auth_header)
+        if username and check_htpasswd(DEFAULT_HTPASSWD, username, password):
+            token = create_jwt(username, password)
+            if service:
+                target = f"//{service}.{COOKIE_DOMAIN}/{path}"
+            else:
+                target = "//{COOKIE_DOMAIN}/"
+
+            resp = make_response(redirect(target, code=302))
+            resp.set_cookie(
+                COOKIE_NAME, token,
+                httponly=True,
+                secure=True,
+                domain=COOKIE_DOMAIN,
+                path="/"
+            )
+            return resp
+
+    try:
+        resp = requests.get(PANEL_URL)
+        if resp.status_code == 200:
+            return Response(resp.content, 401)
+    except requests.RequestException as e:
+        pass
+
+    return Response("Authentication required", 401, {"WWW-Authenticate": 'Basic realm="Restricted Area"'})
+
+if __name__ == "__main__":
+    app.run(port=8888)
+
+AUTH
+
+    cat > /opt/subdomain-auth/wsgi.py << WSGI
+from auth import app
+
+if __name__ == "__main__":
+    app.run()
+
+WSGI
+}

@@ -84,8 +84,9 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic_user_file/d;
     /^[[:space:]]*proxy_pass/ s|:$app_port;|:$app_port\$request_uri;|;
     s|^location \^~ |location |;
-    s|^location /$app_baseurl \{/|location /$app_baseurl/ {
-    auth_request /subdomain-auth;|
+    s|^location /$app_baseurl \{/|location /$app_baseurl/ {\\
+    set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${master}\";\\
+    auth_request @auth;|
     " /etc/nginx/apps/$app_name.conf
     sed "s|<UrlBase>$app_baseurl</UrlBase>|<UrlBase />|g" -i "$app_configdir"/config.xml
 fi

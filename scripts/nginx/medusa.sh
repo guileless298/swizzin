@@ -42,13 +42,14 @@ sed -i "s/web_host.*/web_host = 127.0.0.1/g" /opt/medusa/config.ini
 
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
-    sed -Ei '
+    sed -Ei "
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
-    /^[[:space:]]*proxy_pass/ s|/medusa;|$request_uri;|;
-    s|^location /medusa \{|location /medusa/ {\
-    auth_request /subdomain-auth;|
-    ' /etc/nginx/apps/medusa.conf
+    /^[[:space:]]*proxy_pass/ s|/medusa;|\$request_uri;|;
+    s|^location /medusa \{|location /medusa/ {\\
+    set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${user}\";\\
+    auth_request @auth;|
+    " /etc/nginx/apps/medusa.conf
     sed -i "s/web_root.*/web_root = \"\"/g" /opt/medusa/config.ini
 fi
 

@@ -33,14 +33,15 @@ EOF
 
 if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
-    sed -Ei '
+    sed -Ei "
     /^[[:space:]]*proxy_redirect/d;
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
-    /^[[:space:]]*proxy_pass/ s|:10000;|:10000$request_uri;|;
+    /^[[:space:]]*proxy_pass/ s|:10000;|:10000\$request_uri;|;
     /^location \/webmin\/ \{/a\
-    auth_request /subdomain-auth;
-    ' /etc/nginx/apps/webmin.conf
+    set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${MASTER}\";\\
+    auth_request @auth;
+    " /etc/nginx/apps/webmin.conf
     sed -i 's|/webmin||' /etc/webmin/config
 fi
 

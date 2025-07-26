@@ -25,8 +25,9 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
     /^[[:space:]]*proxy_pass/ s|:$port;|:$port\$request_uri;|
-    s|^location \^~ /mylar \{|location /mylar/ {
-    auth_request /subdomain-auth;|
+    s|^location \^~ /mylar \{|location /mylar/ {\\
+    set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${mylar_owner}\";\\
+    auth_request @auth;|
     " /etc/nginx/apps/mylar.conf
     sed -r 's|http_root = (.*)|http_root =|g' -i "/home/${mylar_owner}/.config/mylar/config.ini"
 fi

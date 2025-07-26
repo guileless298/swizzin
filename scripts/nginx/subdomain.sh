@@ -4,8 +4,8 @@ hostname=$(grep -m1 "server_name" /etc/nginx/sites-enabled/default | awk '{print
 escaped_hostname=${hostname//./\\.};
 
 sed -Ei "
-/map \$host \$matched_subdomain/,/}/d;
-/map \$host \$matched_domain/,/}/d;
+/^map \$host \$matched_subdomain/,/}/d;
+/^map \$host \$matched_domain/,/}/d;
 1i\\
 map \$host \$matched_subdomain {\\
     ~^([^.]+)\\\\.$escaped_hostname\$ \$1;\\
@@ -17,17 +17,35 @@ map \$host \$matched_domain {\\
     default \$host;\\
 }\\
 
+upstream auth {
+    server 127.0.0.1:8888;
+}
+
 s|server_name .*;|server_name $hostname *.$hostname;|g;
-/root \/srv\/;/,/include/{//!d;};
-/root \/srv\/;/a\\
+/^[[:space:]]*root[[:space:]]+\/srv\/;/,/^[[:space:]]*include/{//!d;};
+/^[[:space:]]*root[[:space:]]+\/srv\/;/a\\
   \\
-  location = /subdomain-auth {\\
+  location @auth {\\
     internal;\\
-    proxy_pass http://127.0.0.1:8888/validate;\\
-    proxy_set_header Host \$host;\\
+    proxy_pass http://auth/verify;\\
     proxy_pass_request_body off;\\
+    proxy_set_header X-Auth-Path \$auth_htpasswd;
+    proxy_set_header Host \$host;\\
     proxy_set_header Content-Length \"\";\\
   }\\
   \\
-  rewrite ^ \"/\$matched_subdomain\$uri\" break;
+  error_page 401 = @auth_failure;\\
+  location @auth_failure {\\
+    return 302 \$scheme://\$matched_domain/login/\$matched_subdomain/\$request_uri;\\
+  }\\
+  \\
+  rewrite ^ \"/\$matched_subdomain\$uri\" break;\\
+  location ^~ /panel/login {\\
+    proxy_pass http://auth/login/;\\
+    proxy_set_header Host \$host;\\
+    proxy_set_header X-Real-IP \$remote_addr;\\
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\\
+    proxy_set_header Authorization \$http_authorization;\\
+  }\\
+  \\
 " /etc/nginx/sites-enabled/default
