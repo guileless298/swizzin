@@ -47,5 +47,5 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\\
     proxy_set_header Authorization \$http_authorization;\\
   }\\
-  \\
+
 " /etc/nginx/sites-enabled/default
