@@ -3,8 +3,6 @@
 hostname=$(grep -m1 "server_name" /etc/nginx/sites-enabled/default | awk '{print $2}' | sed 's/;//g')
 escaped_hostname=${hostname//./\\\\.};
 
-set -x
-
 sed -Ei "
 /^map \$host \$matched_subdomain/,/}/d;
 /^map \$host \$matched_domain/,/}/d;
