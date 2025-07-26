@@ -58,9 +58,9 @@ def check_htpasswd(htpasswd_path, username, password):
     except Exception:
         return False
 
-@app.route("/", defaults={"service": None, "path": None})
-@app.route("/<service>", defaults={"path": None})
-@app.route("/<service>/<path>")
+@app.route("/", defaults={"service": None, "path": ""})
+@app.route("/<service>/", defaults={"path": ""})
+@app.route("/<service>/<path:path>")
 def endpoint(service, path):
     htpasswd_path = request.headers.get("X-Auth-Path")
     if htpasswd_path is not None:
