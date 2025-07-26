@@ -44,8 +44,8 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
   }\\
   \\
   rewrite ^/ \"/\$matched_subdomain\$uri\" break;\\
-  location /panel/login {\\
-    proxy_pass http://auth;\\
+  location ~ ^/panel/login(.*)$ {\\
+    proxy_pass http://auth\$1;\\
     proxy_set_header Host \$host;\\
     proxy_set_header X-Real-IP \$remote_addr;\\
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\\

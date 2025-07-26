@@ -59,8 +59,8 @@ def check_htpasswd(htpasswd_path, username, password):
         return False
 
 @app.route("/", defaults={"service": None, "path": None})
-@app.route("/panel/login/<service>", defaults={"path": None})
-@app.route("/panel/login/<service>/<path>")
+@app.route("/<service>", defaults={"path": None})
+@app.route("/<service>/<path>")
 def endpoint(service, path):
     htpasswd_path = request.headers.get("X-Auth-Path")
     if htpasswd_path is not None:
