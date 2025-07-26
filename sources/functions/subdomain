@@ -70,18 +70,18 @@ def endpoint(path):
 def verify(htpasswd_path):
     token = request.cookies.get(COOKIE_NAME)
     if not token:
-        return Response("Unauthorized", status=401)
+        return "", 401
 
     username, password = decode_jwt(token)
     if not username:
-        return Response("Unauthorized", status=401)
+        return "", 401
 
     if check_htpasswd(htpasswd_path, username, password):
-        return Response(status=204, headers={"X-Remote-User": username})
+        return "", 204, "X-Remote-User": username}
     elif check_htpasswd(DEFAULT_HTPASSWD, username, password):
-        return Response("Forbidden", status=403)
+        return "", 403
     else:
-        return Response("Unauthorized", status=401)
+        return "", 401
 
 def login(service, path):
     auth_header = request.headers.get("Authorization")
@@ -107,11 +107,11 @@ def login(service, path):
     try:
         resp = requests.get(PANEL_URL)
         if resp.status_code == 200:
-            return Response(resp.content, 401)
+            return resp.content, 401
     except requests.RequestException:
         pass
 
-    return Response("Authentication required", 401, {"WWW-Authenticate": 'Basic realm="Restricted Area"'})
+    return "", 401, {"WWW-Authenticate": 'Basic realm="Restricted Area"'}
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=8888)
