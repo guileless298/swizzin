@@ -16,10 +16,10 @@ map \$host \$matched_domain {\\
     ~^[^.]+\\\\.$escaped_hostname\$ \"$hostname\";\\
     default \$host;\\
 }\\
-
-upstream auth {
-    server 127.0.0.1:8888;
-}
+\\
+upstream auth {\\
+    server 127.0.0.1:8888;\\
+}\\
 
 s|server_name .*;|server_name $hostname *.$hostname;|g;
 /^[[:space:]]*root[[:space:]]+\/srv\/;/,/^[[:space:]]*include/{//!d;};
