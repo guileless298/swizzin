@@ -23,14 +23,14 @@ upstream auth {
 CONF
 
 cat > /etc/nginx/apps/subdomain.conf << 'CONF'
-set $auth_htpasswd \"/etc/htpasswd\";
+set $auth_htpasswd "/etc/htpasswd";
   location = auth {
     internal;
     proxy_pass http://auth;
     proxy_pass_request_body off;
     proxy_set_header X-Auth-Path $auth_htpasswd;
     proxy_set_header Host $host;
-    proxy_set_header Content-Length \"\";
+    proxy_set_header Content-Length "";
   }
 
   error_page 401 = @auth_failure;
@@ -59,7 +59,7 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
 /^[[:space:]]*root[[:space:]]+\/srv\/;/,/^[[:space:]]*include/{//!d;};
 /^[[:space:]]*root[[:space:]]+\/srv\/;/a\\
   \\
-  set \$auth_htpasswd \"/etc/htpasswd\";
+  set \$auth_htpasswd \"/etc/htpasswd\";\\
   rewrite ^/ \"/\$matched_subdomain\$uri\" break;
 
 " /etc/nginx/sites-enabled/default
