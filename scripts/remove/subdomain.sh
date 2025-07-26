@@ -2,6 +2,9 @@
 
 hostname=$(grep -m1 "server_name" /etc/nginx/sites-enabled/default | awk '{print $2}' | sed 's/;//g')
 
+systemctl disable --now -q panel
+rm -rf /opt/subdomain-auth
+
 sed -Ei "
 s|server_name .*;|server_name $hostname;|g;
 /root \/srv\/;/,/include/{//!d;};
