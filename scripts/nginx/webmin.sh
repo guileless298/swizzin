@@ -40,7 +40,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*proxy_pass/ s|:10000;|:10000\$request_uri;|;
     /^location \/webmin\/ \{/a\
     set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${MASTER}\";\\
-    auth_request @auth;
+    auth_request auth;
     " /etc/nginx/apps/webmin.conf
     sed -i 's|/webmin||' /etc/webmin/config
 fi

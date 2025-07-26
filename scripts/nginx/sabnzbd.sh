@@ -37,7 +37,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*proxy_pass/ s|/sabnzbd;|\$request_uri;|;
     s|^location /sabnzbd \{|location /sabnzbd/ {\\
   set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${user}\";\\
-  auth_request @auth;|
+  auth_request auth;|
     " /etc/nginx/apps/sabnzbd.conf
     sed -i "s|^url_base = .*|url_base =|g" /home/${user}/.config/sabnzbd/sabnzbd.ini
 fi

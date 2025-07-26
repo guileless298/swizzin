@@ -35,7 +35,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*proxy_pass/ s|:4200;|:4200\$request_uri;|;
     /^location \/shell\/ \{/a\\
     set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${MASTER}\";\\
-    auth_request @auth;
+    auth_request auth;
     " /etc/nginx/apps/shell.conf
 fi
 

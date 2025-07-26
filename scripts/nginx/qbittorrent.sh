@@ -76,7 +76,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
     s|^location /qbittorrent\.downloads \{|location /panel/qbittorrent.downloads/ {\
-    auth_request @auth;|
+    auth_request auth;|
     ' /etc/nginx/apps/qbtindex.conf
     # shellcheck disable=SC2016
     sed -Ei '
@@ -88,6 +88,6 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*return/ s|/qbittorrent/;|$scheme://qbittorrent.$matched_domain$request_uri;|;
     /^[[:space:]]*proxy_pass/ s|$request_uri.qbittorrent|$upstream_http_x_remote_user.qbittorrent$request_uri;|;
     /^location \/qbittorrent\/ \{/a\
-    auth_request @auth;
+    auth_request auth;
     ' /etc/nginx/apps/qbittorrent.conf
 fi

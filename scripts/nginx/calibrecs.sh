@@ -23,7 +23,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
     /^location \/calibrecs\/ \{/a\
-    auth_request @auth;
+    auth_request auth;
     ' /etc/nginx/apps/bazarr.conf
     sed -i 's| --url-prefix /calibrecs||' /etc/systemd/system/calibrecs.service
 fi

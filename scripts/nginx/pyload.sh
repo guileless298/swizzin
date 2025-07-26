@@ -38,7 +38,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*proxy_pass/ s|:8000/;|:8000\$request_uri;|;
     /^location \/pyload\/ \{/a\\
   set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${user}\";\\
-  auth_request @auth;
+  auth_request auth;
     " /etc/nginx/apps/pyload.conf
     sed -i 's/"Path prefix" = /"Path prefix" =/g' /opt/pyload/pyload.conf
 fi

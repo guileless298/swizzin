@@ -35,7 +35,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*proxy_pass/ s|/sickgear;|\$request_uri;|;
     s|^location /sickgear \{|location /sickgear/ {\\
     set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${user}\";\\
-    auth_request @auth;|
+    auth_request auth;|
     " /etc/nginx/apps/sickgear.conf
     sed -i "s/web_root.*/web_root =/g" /opt/sickgear/config.ini
 fi
