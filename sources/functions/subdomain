@@ -58,8 +58,15 @@ def check_htpasswd(htpasswd_path, username, password):
     except Exception:
         return False
 
-@app.route("/verify")
-def verify():
+@app.route("/", defaults={"service": None, "path": None})
+@app.route("/<service>/<path>")
+def endpoint(service, path):
+    htpasswd_path = request.headers.get("X-Auth-Path")
+    if htpasswd_path is not None:
+        return verify(htpasswd_path)
+    return login(service, path)
+
+def verify(htpasswd_path):
     token = request.cookies.get(COOKIE_NAME)
     if not token:
         return Response("Unauthorized", status=401)
@@ -68,7 +75,6 @@ def verify():
     if not username:
         return Response("Unauthorized", status=401)
 
-    htpasswd_path = request.headers.get("X-Auth-Path")
     if check_htpasswd(htpasswd_path, username, password):
         return Response("OK", status=200, headers={"X-Remote-User": username})
     elif check_htpasswd(DEFAULT_HTPASSWD, username, password):
@@ -76,9 +82,7 @@ def verify():
     else:
         return Response("Forbidden", status=403)
 
-@app.route("/login", defaults={'service': None, 'path': None})
-@app.route("/login/<service>/<path>")
-def subdomain_auth(service, path):
+def login(service, path):
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.lower().startswith("basic "):
         username, password = extract_basic_auth(auth_header)

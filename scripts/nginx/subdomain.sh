@@ -27,7 +27,7 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
   \\
   location @auth {\\
     internal;\\
-    proxy_pass http://auth/verify;\\
+    proxy_pass http://auth;\\
     proxy_pass_request_body off;\\
     proxy_set_header X-Auth-Path \$auth_htpasswd;\\
     proxy_set_header Host \$host;\\
@@ -41,7 +41,7 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
   \\
   rewrite ^ \"/\$matched_subdomain\$uri\" break;\\
   location ^~ /panel/login {\\
-    proxy_pass http://auth/login/;\\
+    proxy_pass http://auth/;\\
     proxy_set_header Host \$host;\\
     proxy_set_header X-Real-IP \$remote_addr;\\
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\\
