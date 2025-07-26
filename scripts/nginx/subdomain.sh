@@ -29,6 +29,7 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
 /^[[:space:]]*root[[:space:]]+\/srv\/;/,/^[[:space:]]*include/{//!d;};
 /^[[:space:]]*root[[:space:]]+\/srv\/;/a\\
   \\
+  set \$auth_htpasswd \"\";\\
   location auth {\\
     internal;\\
     proxy_pass http://auth;\\
