@@ -9,6 +9,7 @@ escaped_hostname=${hostname//./\\\\.};
 sed -Ei "
 /^map \$host \$matched_subdomain/,/}/d;
 /^map \$host \$matched_domain/,/}/d;
+/^upstream auth/,/}/d;
 1i\\
 map \$host \$matched_subdomain {\\
     ~^([^.]+)\\\\.$escaped_hostname\$ \$1;\\
@@ -42,7 +43,7 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
     return 302 \$scheme://\$matched_domain/login/\$matched_subdomain/\$request_uri;\\
   }\\
   \\
-  rewrite ^ \"/\$matched_subdomain\$uri\" break;\\
+  rewrite ^/ \"/\$matched_subdomain\$uri\" break;\\
   location ^~ /panel/login {\\
     proxy_pass http://auth/;\\
     proxy_set_header Host \$host;\\
