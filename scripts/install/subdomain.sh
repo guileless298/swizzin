@@ -47,8 +47,8 @@ _install() {
     echo_progress_done
 
     echo_progress_start "Installing python dependencies"
-    /opt/.venv/swizzin/bin/pip install --upgrade pip wheel >> ${log} 2>&1
-    /opt/.venv/swizzin/bin/pip install -r /opt/swizzin/requirements.txt >> ${log} 2>&1
+    /opt/.venv/subdomain-auth/bin/pip install --upgrade pip wheel >> ${log} 2>&1
+    /opt/.venv/subdomain-auth/bin/pip install -r /opt/subdomain-auth/requirements.txt >> ${log} 2>&1
     echo_progress_done
 
     touch /install/.subdomain.lock

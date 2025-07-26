@@ -113,7 +113,7 @@ def login(service, path):
     return Response("Authentication required", 401, {"WWW-Authenticate": 'Basic realm="Restricted Area"'})
 
 if __name__ == "__main__":
-    app.run(host=127.0.0.1, port=8888)
+    app.run(host="127.0.0.1", port=8888)
 
 AUTH
 
