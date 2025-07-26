@@ -45,13 +45,6 @@ set $auth_htpasswd "/etc/htpasswd";
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header Authorization $http_authorization;
   }
-
-  location = /panel/logout {
-    proxy_pass http://auth/logou
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  }
 CONF
 
 sed -Ei "
