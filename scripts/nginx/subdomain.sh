@@ -31,7 +31,7 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
     internal;\\
     proxy_pass http://auth/verify;\\
     proxy_pass_request_body off;\\
-    proxy_set_header X-Auth-Path \$auth_htpasswd;
+    proxy_set_header X-Auth-Path \$auth_htpasswd;\\
     proxy_set_header Host \$host;\\
     proxy_set_header Content-Length \"\";\\
   }\\
