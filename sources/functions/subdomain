@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function install_auth_server() {
-    hostname=$(grep -m1 "server_name" /etc/nginx/sites-enabled/default | awk '{print $2}' | sed 's/;//g' | sed 's/\./\\./g')
+    hostname=$(grep -m1 "server_name" /etc/nginx/sites-enabled/default | awk '{print $2}' | sed 's/;//g')
     cat > /opt/subdomain-auth/requirements.txt << REQ
 flask
 requests
@@ -59,8 +59,8 @@ def check_htpasswd(htpasswd_path, username, password):
         return False
 
 @app.route("/", defaults={"service": None, "path": None})
-@app.route("/<service>", defaults={"path": None})
-@app.route("/<service>/<path>")
+@app.route("/panel/login/<service>", defaults={"path": None})
+@app.route("/panel/login/<service>/<path>")
 def endpoint(service, path):
     htpasswd_path = request.headers.get("X-Auth-Path")
     if htpasswd_path is not None:
