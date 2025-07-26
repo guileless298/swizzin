@@ -47,9 +47,10 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^location \/flood \{/,/^\}$/d;
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
-    /^[[:space:]]*proxy_pass/ s|\$remote_user\.flood;|$upstream_http_x_remote_user.flood$request_uri;|;
+    /^[[:space:]]*proxy_pass/ s|\.flood;|.flood$request_uri;|;
     s|^location /flood/api \{|location /flood/api/ {\
-    auth_request auth;|
+    auth_request auth;\
+    auth_request_set $remote_user $upstream_http_x_remote_user;|
     ' /etc/nginx/apps/flood.conf
 fi
 
