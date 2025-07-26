@@ -54,3 +54,4 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
 " /etc/nginx/sites-enabled/default
 
 install_auth_server
+systemctl restart subauth -q
