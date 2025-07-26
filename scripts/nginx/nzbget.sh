@@ -48,9 +48,9 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
     /^[[:space:]]*rewrite/d;
-    /^[[:space:]]*proxy_pass/ s|\.nzbget;|.nzbget$request_uri;|;
+    /^[[:space:]]*proxy_pass/ s|\$remote_user\.nzbget;|$auth_remote_user.nzbget$request_uri;|;
     /^location \/nzbget\/ \{/a\
   auth_request auth;\
-  auth_request_set $remote_user $upstream_http_x_remote_user;
+  auth_request_set $auth_remote_user $upstream_http_x_remote_user;
     ' /etc/nginx/apps/nzbget.conf
 fi

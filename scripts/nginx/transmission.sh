@@ -88,9 +88,9 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^location \/transmission \{/,/^\}$/d;
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
-    /^[[:space:]]*proxy_pass/ s|\.transmission;|.transmission$request_uri;|;
+    /^[[:space:]]*proxy_pass/ s|\$remote_user\.transmission;|$auth_remote_user.transmission$request_uri;|;
     /^location \/transmission\/ \{/a\
     auth_request auth;\
-    auth_request_set $remote_user $upstream_http_x_remote_user;
+    auth_request_set $auth_remote_user $upstream_http_x_remote_user;
     ' /etc/nginx/apps/transmission.conf
 fi

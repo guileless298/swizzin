@@ -42,9 +42,9 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
     /^[[:space:]]*rewrite/d;
-    /^[[:space:]]*proxy_pass/ s|\.autobrr;|.autobrr$request_uri;|;
+    /^[[:space:]]*proxy_pass/ s|\$remote_user\.autobrr;|$auth_remote_user.autobrr$request_uri;|;
     /^location \/autobrr\/ \{/a\
     auth_request auth;\
-    auth_request_set $remote_user $upstream_http_x_remote_user;
+    auth_request_set $auth_remote_user $upstream_http_x_remote_user;
     ' /etc/nginx/apps/autobrr.conf
 fi
