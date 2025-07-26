@@ -77,11 +77,11 @@ def verify(htpasswd_path):
         return Response("Unauthorized", status=401)
 
     if check_htpasswd(htpasswd_path, username, password):
-        return Response("OK", status=200, headers={"X-Remote-User": username})
+        return Response(status=204, headers={"X-Remote-User": username})
     elif check_htpasswd(DEFAULT_HTPASSWD, username, password):
-        return Response("Unauthorized", status=401)
-    else:
         return Response("Forbidden", status=403)
+    else:
+        return Response("Unauthorized", status=401)
 
 def login(service, path):
     auth_header = request.headers.get("Authorization")
