@@ -54,4 +54,6 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
 " /etc/nginx/sites-enabled/default
 
 install_auth_server
+/opt/.venv/subdomain-auth/bin/pip install --upgrade pip wheel >> ${log} 2>&1
+/opt/.venv/subdomain-auth/bin/pip install -r /opt/subdomain-auth/requirements.txt >> ${log} 2>&1
 systemctl restart subauth -q
