@@ -20,8 +20,8 @@ _install() {
     echo_progress_start "Installing auth server"
     mkdir -p /opt/subauth/src
 
-    openssl rand -hex 64 > /opt/subdomain-auth/.secret
-    chmod 400 /opt/subdomain-auth/.secret
+    openssl rand -hex 64 > /opt/subauth/.secret
+    chmod 400 /opt/subauth/.secret
 
     useradd -r subauth -s /usr/sbin/nologin > /dev/null 2>&1
     write_auth_server
