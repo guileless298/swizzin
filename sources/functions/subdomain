@@ -5,7 +5,7 @@ function build_auth_server() {
     chown -R subauth: /opt/subauth
 }
 
-function install_auth_server() {
+function write_auth_server() {
     hostname=$(grep -m1 "server_name" /etc/nginx/sites-enabled/default | awk '{print $2}' | sed 's/;//g')
 
     cat > /opt/subauth/Cargo.toml << TOML
