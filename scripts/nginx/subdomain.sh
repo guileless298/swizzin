@@ -63,7 +63,7 @@ location @auth_failure {
 }
 
 location @auth_no_panel {
-    add_header WWW-Authenticate 'Basic realm="What's the password?"';
+    add_header WWW-Authenticate 'Basic realm="What\'s the password?"';
     return 401;
 }
 
