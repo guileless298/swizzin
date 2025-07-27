@@ -35,7 +35,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*proxy_pass/ s|/sickchill;|\$request_uri;|;
     s|^location /sickchill \{|location /sickchill/ {\\
     set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${user}\";\\
-    auth_request auth;|
+    include /etc/nginx/snippets/subauth.conf;|
     " /etc/nginx/apps/sickchill.conf
     sed -i "s/web_root.*/web_root =/g" /opt/sickchill/config.ini
 fi

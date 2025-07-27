@@ -27,8 +27,8 @@ map \$auth_set_cookie \$auth_bypass {
 }
 CONF
 
-cat > /etc/nginx/snippets/subdomain.conf << CONF
-auth_request auth;
+cat > /etc/nginx/snippets/subauth.conf << CONF
+include /etc/nginx/snippets/subauth.conf;
 auth_request_set \$auth_set_cookie \$upstream_http_set_cookie;
 add_header Set-Cookie \$auth_set_cookie;
 error_page 401 403 = @auth_failure;

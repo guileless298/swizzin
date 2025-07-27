@@ -50,7 +50,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*rewrite/d;
     /^[[:space:]]*proxy_pass/ s|\$remote_user\.nzbget;|$auth_remote_user.nzbget$request_uri;|;
     /^location \/nzbget\/ \{/a\
-  auth_request auth;\
+  include /etc/nginx/snippets/subauth.conf;\
   auth_request_set $auth_remote_user $upstream_http_x_remote_user;
     ' /etc/nginx/apps/nzbget.conf
 fi

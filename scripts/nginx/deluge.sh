@@ -73,7 +73,7 @@ DRP
             /^[[:space:]]*auth_basic/d;
             /^[[:space:]]*auth_basic_user_file/d;
             s|^location /deluge\.downloads \{|location /panel/deluge.downloads/ {\
-  auth_request auth;|
+  include /etc/nginx/snippets/subauth.conf;|
             ' /etc/nginx/apps/dindex.conf
             # shellcheck disable=SC2016
             sed -Ei '
@@ -84,7 +84,7 @@ DRP
             /^[[:space:]]*rewrite/d;
             /^[[:space:]]*proxy_pass/ s|\$remote_user\.deluge;|$auth_remote_user.deluge$request_uri;|;
             /^location \/deluge\/ \{/a\
-  auth_request auth;\
+  include /etc/nginx/snippets/subauth.conf;\
   auth_request_set $auth_remote_user $upstream_http_x_remote_user;
             ' /etc/nginx/apps/deluge.conf
         fi

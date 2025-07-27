@@ -36,7 +36,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*proxy_pass/ s|/nzbhydra;|$request_uri;|;
     s|^location /nzbhydra \{|location /nzbhydra/ {\\
   set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${user}\";\\
-  auth_request auth;|
+  include /etc/nginx/snippets/subauth.conf;|
     " /etc/nginx/apps/nzbhydra.conf
     sed -i "s/urlBase.*/urlBase: \"\"/g" /home/${user}/.config/nzbhydra2/nzbhydra.yml
 fi

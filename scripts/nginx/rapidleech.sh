@@ -35,6 +35,6 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic_user_file/d;
     s|^location /rapidleech \{|location /rapidleech/ {\
   set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${MASTER}\";\\
-  auth_request auth;|
+  include /etc/nginx/snippets/subauth.conf;|
     " /etc/nginx/apps/rapidleech.conf
 fi

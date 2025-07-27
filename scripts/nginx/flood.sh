@@ -49,7 +49,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic_user_file/d;
     /^[[:space:]]*proxy_pass/ s|\$remote_user\.flood;|$auth_remote_user.flood$request_uri;|;
     s|^location /flood/api \{|location /flood/api/ {\
-    auth_request auth;\
+    include /etc/nginx/snippets/subauth.conf;\
     auth_request_set $auth_remote_user $upstream_http_x_remote_user;|
     ' /etc/nginx/apps/flood.conf
 fi

@@ -81,7 +81,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
     s|^location /transmission\.downloads \{|location /panel/transmission.downloads/ {\
-    auth_request auth;|
+    include /etc/nginx/snippets/subauth.conf;|
     ' /etc/nginx/apps/tmsindex.conf
     # shellcheck disable=SC2016
     sed -Ei '
@@ -90,7 +90,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic_user_file/d;
     /^[[:space:]]*proxy_pass/ s|\$remote_user\.transmission;|$auth_remote_user.transmission$request_uri;|;
     /^location \/transmission\/ \{/a\
-    auth_request auth;\
+    include /etc/nginx/snippets/subauth.conf;\
     auth_request_set $auth_remote_user $upstream_http_x_remote_user;
     ' /etc/nginx/apps/transmission.conf
 fi

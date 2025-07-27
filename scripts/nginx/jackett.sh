@@ -41,7 +41,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*proxy_pass/ s|/jacket/;|\$request_uri;|;
     /^location \/jackett\/ \{/a\\
   set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${MASTER}\";\\
-  auth_request auth;
+  include /etc/nginx/snippets/subauth.conf;
     " /etc/nginx/apps/jackett.conf
     sed -i "s/\"BasePathOverride.*/\"BasePathOverride\": \"\",/g" /home/${MASTER}/.config/Jackett/ServerConfig.json
 fi

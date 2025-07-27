@@ -49,7 +49,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*proxy_pass/ s|/\$ndpath\$is_args\$args;|\$request_uri;|;
     s|^location ~ /netdata/\(\?<ndpath>\.\*\) \{|location /netdata/ {\\
   set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${user}\";\\
-  auth_request auth;|
+  include /etc/nginx/snippets/subauth.conf;|
     " /etc/nginx/apps/netdata.conf
 fi
 
