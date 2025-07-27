@@ -1,157 +1,307 @@
 #!/bin/bash
 
+function build_auth_server() {
+    /root/.cargo/bin/cargo build -q --release --manifest-path /opt/subauth/Cargo.toml
+    chown -R subauth: /opt/subauth
+}
+
 function install_auth_server() {
     hostname=$(grep -m1 "server_name" /etc/nginx/sites-enabled/default | awk '{print $2}' | sed 's/;//g')
-    cat > /opt/subdomain-auth/requirements.txt << REQ
-flask
-requests
-pyjwt
-passlib
-REQ
 
-    cat > /opt/subdomain-auth/auth.py << AUTH
-#!/usr/bin/env python
+    cat > /opt/subauth/Cargo.toml << TOML
+[package]
+name = "subauth"
+version = "0.1.0"
+edition = "2021"
 
-from flask import Flask, request, redirect, make_response, Response
-from passlib.apache import HtpasswdFile
-import jwt
-import os
-import base64
-import requests
+[dependencies]
+htpasswd-verify = "0.3.0"
+josekit = "0.10.3"
+serde = "1.0.219"
+serde_cbor = "0.11.2"
+tiny_http = "0.12.0"
+fastcache = "0.1.7"
+chrono = { version = "0.4.41", features = ["serde"] }
+serde_json = "1.0.141"
+once_cell = "1.21.3"
 
-app = Flask(__name__)
-DEFAULT_HTPASSWD = "/etc/htpasswd"
-COOKIE_NAME = "subdomain_auth"
-COOKIE_DOMAIN = "$hostname"
-PANEL_URL = "http://127.0.0.1:8333/login"
+TOML
 
-with open(".secret") as f:
-    SECRET_KEY = f.read()
+    cat > /opt/subauth/src/main.rs << MAIN
+use chrono::{DateTime, Local, TimeDelta, Utc};
+use fastcache::Cache;
+use htpasswd_verify::Htpasswd;
+use josekit::jwe;
+use josekit::jwe::{JweDecrypter, JweEncrypter, JweHeader, A256GCMKW};
+use once_cell::unsync::Lazy;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::fs;
+use std::path::PathBuf;
+use std::rc::Rc;
+use std::time::Duration;
+use tiny_http::{Header, Method, Request, Response, ResponseBox, Server, StatusCode};
 
-def extract_basic_auth(auth_header):
-    try:
-        b64 = auth_header.split(" ", 1)[1]
-        decoded = base64.b64decode(b64).decode()
-        return decoded.split(":", 1)
-    except Exception:
-        return None, None
+const BINDING: &str = "127.0.0.1:8888";
+const COOKIE_KEY: &str = "subdomain_auth=";
+const COOKIE_DOMAIN: &str = "$hostname";
+const COOKIE_DURATION: TimeDelta = TimeDelta::days(15);
+const REFRESH_AFTER: TimeDelta = TimeDelta::days(1);
 
-def create_jwt(username, password):
-    return jwt.encode({"user": username, "password": password}, SECRET_KEY, algorithm="HS256")
+struct JWEScheme<E: JweEncrypter, D: JweDecrypter> {
+    encrypter: E,
+    decrypter: D,
+    header: JweHeader,
+}
 
-def decode_jwt(token):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        username = payload["user"]
-        password = payload["password"]
-        return username, password
-    except Exception:
-        return None, None
+#[derive(Serialize, Deserialize)]
+struct Auth {
+    username: String,
+    password: String,
+}
 
-def check_htpasswd(htpasswd_path, username, password):
-    try:
-        htpasswd = HtpasswdFile(htpasswd_path)
-        return htpasswd.check_password(username, password)
-    except Exception:
-        return False
+#[derive(Serialize, Deserialize)]
+struct Claim {
+    #[serde(with = "chrono::serde::ts_seconds")]
+    issue: DateTime<Utc>,
+    auth: Auth,
+}
 
-@app.route("/logout")
-def logout(path):
-    return
+struct RequestHeaders<'a> {
+    x_auth_path: String,
+    x_default_auth_path: String,
+    all: HashMap<&'a str, &'a str>,
+}
 
-@app.route("/", defaults={"path": ""})
-@app.route("/<path:path>")
-def endpoint(path):
-    htpasswd_path = request.headers.get("X-Auth-Path")
-    if htpasswd_path is not None:
-        return verify(htpasswd_path)
+#[derive(Debug)]
+enum ValidationFailure {
+    Internal,
+    BadHeader,
+    Bad,
+    Unauthorized,
+    Forbidden,
+    Method,
+}
 
-    parts = path.split("/", 1)
-    service = parts[0]
-    path = parts[1] if len(parts) == 2 else ""
-    return login(service, path)
+fn main() {
+    let server = Server::http(BINDING).expect("Could not start server");
+    let secret = fs::read(".secret").expect("Could not read secrets");
 
-def verify(htpasswd_path):
-    token = request.cookies.get(COOKIE_NAME)
-    if not token:
-        return "", 401
-
-    username, password = decode_jwt(token)
-    if not username:
-        return "", 401
-
-    if check_htpasswd(htpasswd_path, username, password):
-        return "", 204, {"X-Remote-User": username}
-    elif check_htpasswd(DEFAULT_HTPASSWD, username, password):
-        return "", 403
-    else:
-        return "", 401
-
-def login(service, path):
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.lower().startswith("basic "):
-        username, password = extract_basic_auth(auth_header)
-        if username and check_htpasswd(DEFAULT_HTPASSWD, username, password):
-            token = create_jwt(username, password)
-            if service:
-                target = f"//{service}.{COOKIE_DOMAIN}/{path}"
-            else:
-                target = "//{COOKIE_DOMAIN}/"
-
-            resp = make_response(redirect(target, code=302))
-            resp.set_cookie(
-                COOKIE_NAME, token,
-                httponly=True,
-                secure=True,
-                domain=COOKIE_DOMAIN,
-                path="/"
-            )
-            return resp
-
-    try:
-        resp = requests.get(PANEL_URL)
-        if resp.status_code == 200:
-            return resp.content, 401
-    except requests.RequestException:
-        pass
-
-    return "", 401, {"WWW-Authenticate": 'Basic realm="Restricted Area"'}
-
-if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8888)
-
-AUTH
-
-    cat > /opt/subdomain-auth/wsgi.py << WSGI
-from auth import app
-
-if __name__ == "__main__":
-    app.run()
-
-WSGI
-
-    cat > /opt/subdomain-auth/logout.html << LOGOUT
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Logging out…</title>
-  <script>
-    window.onload = function () {
-      const iframe = document.createElement("iframe");
-      iframe.src = "/logout";
-      iframe.style.display = "none";
-      document.body.appendChild(iframe);
-
-      setTimeout(() => {
-        window.location.href = "/"; // Redirect after logout attempt
-      }, 1000);
+    let jwe_scheme = JWEScheme {
+        encrypter: A256GCMKW.encrypter_from_bytes(&secret).unwrap(),
+        decrypter: A256GCMKW.decrypter_from_bytes(&secret).unwrap(),
+        header: {
+            let mut header = JweHeader::new();
+            header.set_token_type("JWT");
+            header.set_algorithm("A256KW");
+            header.set_content_encryption("A256GCM");
+            header
+        },
     };
-  </script>
-</head>
-<body>
-  <p>Logging out…</p>
-</body>
-</html>
-LOGOUT
+
+    for mut request in server.incoming_requests() {
+        let validation_result = match request.method() {
+            Method::Get => handle_get(&request, &jwe_scheme),
+            Method::Post => handle_post(&mut request, &jwe_scheme),
+            _ => Err(ValidationFailure::Method),
+        };
+
+        let response = match validation_result {
+            Ok(response) => response,
+            Err(ValidationFailure::Internal) => Response::empty(StatusCode(500)).boxed(),
+            Err(ValidationFailure::BadHeader) => Response::empty(StatusCode(428)).boxed(),
+            Err(ValidationFailure::Bad) => Response::empty(StatusCode(400)).boxed(),
+            Err(ValidationFailure::Unauthorized) => Response::empty(StatusCode(401)).boxed(),
+            Err(ValidationFailure::Forbidden) => Response::empty(StatusCode(403)).boxed(),
+            Err(ValidationFailure::Method) => {
+                let mut response = Response::empty(StatusCode(405));
+                response.add_header(Header::from_bytes("Allow", "GET, POST").unwrap());
+                response.boxed()
+            }
+        };
+
+        let _ = request.respond(response);
+    }
+}
+
+fn get_headers(request: &Request) -> Result<RequestHeaders, ValidationFailure> {
+    let mut headers = HashMap::new();
+    for header in request.headers() {
+        headers
+            .entry(header.field.as_str().as_str())
+            .or_insert(header.value.as_str());
+    }
+
+    let x_auth_path = headers
+        .remove("X-Auth-Path")
+        .ok_or(ValidationFailure::BadHeader)?
+        .to_string();
+    let x_default_auth_path = headers
+        .remove("X-Default-Auth-Path")
+        .ok_or(ValidationFailure::BadHeader)?
+        .to_string();
+
+    Ok(RequestHeaders {
+        x_auth_path,
+        x_default_auth_path,
+        all: headers,
+    })
+}
+
+const HTPASSWD_CACHE: Lazy<Cache<String, Rc<Htpasswd>>> =
+    Lazy::new(|| Cache::new(10, Duration::from_secs(60)));
+
+fn get_htpasswd(x_auth_path: String) -> Result<Rc<Htpasswd<'static>>, ValidationFailure> {
+    match HTPASSWD_CACHE.get(&x_auth_path) {
+        Some(entry) => Ok(Rc::clone(&entry)),
+        None => {
+            let path = PathBuf::from(&x_auth_path);
+            let data = fs::read_to_string(path).map_err(|_| ValidationFailure::BadHeader)?;
+            let htpasswd = Rc::new(Htpasswd::new_owned(&data));
+            HTPASSWD_CACHE.insert(x_auth_path, Rc::clone(&htpasswd));
+            Ok(htpasswd)
+        }
+    }
+}
+
+fn handle_get<E: JweEncrypter, D: JweDecrypter>(
+    request: &Request,
+    jwe_scheme: &JWEScheme<E, D>,
+) -> Result<ResponseBox, ValidationFailure> {
+    // Extract headers
+    let headers = get_headers(&request)?;
+    let http_cookie = headers
+        .all
+        .get("Cookie")
+        .ok_or(ValidationFailure::Unauthorized)?;
+
+    // Find JWE
+    let jwe = http_cookie.split(',').find_map(|cookie| {
+        cookie
+            .trim()
+            .strip_prefix(COOKIE_KEY)
+            .map(|s| s.to_string())
+    });
+
+    verify_jwe(jwe_scheme, jwe, headers)
+}
+
+fn handle_post<E: JweEncrypter, D: JweDecrypter>(
+    request: &mut Request,
+    jwe_scheme: &JWEScheme<E, D>,
+) -> Result<ResponseBox, ValidationFailure> {
+    let headers = get_headers(&request)?;
+    if headers.all.get("Content-Type") != Some(&"application/json") {
+        return Err(ValidationFailure::Bad);
+    }
+
+    let x_auth_path = headers.x_auth_path;
+    let x_default_auth_path = headers.x_default_auth_path;
+
+    // Parse JSON body
+    let body_reader = request.as_reader();
+    let auth: Auth = serde_json::from_reader(body_reader).map_err(|_| ValidationFailure::Bad)?;
+
+    // Check authority
+    let forbidden = match verify_auth(&auth, x_auth_path, x_default_auth_path) {
+        Ok(()) => false,
+        Err(ValidationFailure::Forbidden) => true,
+        Err(err) => return Err(err),
+    };
+    issue_jwe(
+        jwe_scheme,
+        Claim {
+            issue: Local::now().to_utc(),
+            auth,
+        },
+        forbidden,
+    )
+}
+
+fn verify_auth(
+    auth: &Auth,
+    x_auth_path: String,
+    x_default_auth_path: String,
+) -> Result<(), ValidationFailure> {
+    let htpasswd = get_htpasswd(x_auth_path)?;
+    if !htpasswd.check(&auth.username, &auth.password) {
+        let default_htpasswd = get_htpasswd(x_default_auth_path)?;
+        if !default_htpasswd.check(&auth.username, &auth.password) {
+            return Err(ValidationFailure::Unauthorized);
+        };
+        return Err(ValidationFailure::Forbidden);
+    }
+    Ok(())
+}
+
+fn verify_jwe<E: JweEncrypter, D: JweDecrypter>(
+    scheme: &JWEScheme<E, D>,
+    raw: Option<String>,
+    headers: RequestHeaders,
+) -> Result<ResponseBox, ValidationFailure> {
+    // Retrieve JWE
+    let content = raw.ok_or(ValidationFailure::Unauthorized)?;
+    let (payload, _) = jwe::deserialize_compact(&content, &scheme.decrypter)
+        .map_err(|_| ValidationFailure::Unauthorized)?;
+    let mut claim =
+        serde_cbor::from_slice::<Claim>(&payload).map_err(|_| ValidationFailure::Unauthorized)?;
+
+    // Expiry check
+    let now = Local::now().to_utc();
+    if claim.issue + COOKIE_DURATION < now {
+        return Err(ValidationFailure::Unauthorized);
+    }
+
+    verify_auth(
+        &claim.auth,
+        headers.x_auth_path,
+        headers.x_default_auth_path,
+    )?;
+
+    // JWE valid
+    if now - claim.issue > REFRESH_AFTER {
+        claim.issue = now;
+        Ok(issue_jwe(&scheme, claim, false)?)
+    } else {
+        let mut response = Response::empty(StatusCode(204));
+        response.add_header(
+            Header::from_bytes("X-Remote-User", claim.auth.username)
+                .map_err(|_| ValidationFailure::Internal)?,
+        );
+        Ok(response.boxed())
+    }
+}
+
+fn issue_jwe<E: JweEncrypter, D: JweDecrypter>(
+    scheme: &JWEScheme<E, D>,
+    claim: Claim,
+    forbidden: bool,
+) -> Result<ResponseBox, ValidationFailure> {
+    let payload = serde_cbor::to_vec(&claim)
+        .map_err(|_| ValidationFailure::Internal)?;
+    let new_jwe = jwe::serialize_compact(&payload, &scheme.header, &scheme.encrypter)
+        .map_err(|_| ValidationFailure::Internal)?;
+
+    let expiry = claim.issue + COOKIE_DURATION;
+    let cookie = format!(
+        "{COOKIE_KEY}{}; Domain={}; Expires={}; HttpOnly; Path=/; SameSite=Lax; Secure",
+        new_jwe,
+        COOKIE_DOMAIN,
+        expiry.format("%a, %d %b %Y %H:%M:%S GMT")
+    );
+
+    let status = if forbidden { 403 } else { 204 };
+    let mut response = Response::empty(StatusCode(status));
+    response.add_header(
+        Header::from_bytes("Set-Cookie", cookie)
+            .map_err(|_| ValidationFailure::Internal)?,
+    );
+    response.add_header(
+        Header::from_bytes("X-Remote-User", claim.auth.username)
+            .map_err(|_| ValidationFailure::Internal)?,
+    );
+    Ok(response.boxed())
+}
+
+MAIN
 }

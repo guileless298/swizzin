@@ -10,40 +10,22 @@ if [[ ! -f /install/.nginx.lock ]]; then
 fi
 
 _install() {
-    #shellcheck source=sources/functions/pyenv
-    . /etc/swizzin/sources/functions/pyenv
+    #shellcheck source=sources/functions/rustup
+    . /etc/swizzin/sources/functions/rustup
     #shellcheck source=sources/functions/subdomain
     . /etc/swizzin/sources/functions/subdomain
 
-    useradd -r subauth -s /usr/sbin/nologin > /dev/null 2>&1
-
-    systempy3_ver=$(get_candidate_version python3)
-
-    if dpkg --compare-versions ${systempy3_ver} lt 3.8.0; then
-        PYENV=True
-    fi
-
-    case ${PYENV} in
-        True)
-            pyenv_install
-            pyenv_install_version 3.11.3
-            pyenv_create_venv 3.11.3 /opt/.venv/subdomain-auth
-            chown -R subauth: /opt/.venv/subdomain-auth
-            ;;
-        *)
-            apt_install python3-pip python3-dev python3-venv
-            python3_venv subauth subdomain-auth
-            ;;
-    esac
+    rustup_install
 
     echo_progress_start "Installing auth server"
-    mkdir /opt/subdomain-auth
+    mkdir -p /opt/subauth/src
 
     openssl rand -hex 64 > /opt/subdomain-auth/.secret
     chmod 400 /opt/subdomain-auth/.secret
 
-    install_auth_server
-    chown -R subauth: /opt/subdomain-auth
+    useradd -r subauth -s /usr/sbin/nologin > /dev/null 2>&1
+    write_auth_server
+    build_auth_server
     echo_progress_done
 
     echo_progress_start "Installing python dependencies"
@@ -69,8 +51,8 @@ After=nginx.service
 Type=simple
 User=subauth
 
-ExecStart=/opt/.venv/subdomain-auth/bin/python auth.py
-WorkingDirectory=/opt/subdomain-auth
+ExecStart=/opt/subauth/target/release/subauth
+WorkingDirectory=/opt/subauth
 Restart=on-failure
 TimeoutStopSec=300
 
