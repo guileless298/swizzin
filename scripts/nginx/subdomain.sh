@@ -60,6 +60,7 @@ location @auth_failure {
     proxy_set_header Content-Length "";
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    sub_filter "\"/static/" "\"//$matched_domain/static/";
     error_page 502 503 504 = @auth_no_panel;
 }
 
