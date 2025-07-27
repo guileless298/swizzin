@@ -52,7 +52,7 @@ location = auth {
 }
 
 location @auth_failure {
-    proxy_pass http://127.0.0.1:8333/login;
+    proxy_pass http://127.0.0.1:8333/login/;
     proxy_pass_request_body off;
     proxy_set_header Host $host;
     proxy_set_header Content-Length "";
