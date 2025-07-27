@@ -60,6 +60,7 @@ location @auth_failure {
     proxy_set_header Content-Length "";
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    sub_filter "/static/js/httpauth.js" "//auth.$matched_domain/login.js";
     sub_filter "\"/static/" "\"//$matched_domain/static/";
     sub_filter_once off;
     error_page 502 503 504 = @auth_no_panel;
@@ -89,8 +90,12 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
 
 " /etc/nginx/sites-enabled/default
 
+mkdir /srv/auth
+cat > /srv/auth/login.js << LOGIN
+alert("test");
+LOGIN
+
 write_auth_server
 build_auth_server
-/opt/.venv/subdomain-auth/bin/pip install --upgrade pip wheel >> ${log} 2>&1
-/opt/.venv/subdomain-auth/bin/pip install -r /opt/subdomain-auth/requirements.txt >> ${log} 2>&1
+
 systemctl restart subauth -q
