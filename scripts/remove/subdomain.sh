@@ -2,7 +2,7 @@
 
 hostname=$(grep -m1 "server_name" /etc/nginx/sites-enabled/default | awk '{print $2}' | sed 's/;//g')
 
-systemctl disable --now -q panel
+systemctl disable --now -q subauth
 rm -rf /opt/subauth
 rm /etc/nginx/conf.d/subdomain.conf
 rm /etc/nginx/snippets/subauth.conf
