@@ -32,11 +32,11 @@ if [[ -f /install/.subdomain.lock ]]; then
     # shellcheck disable=SC2016
     sed -Ei '
     s|^location / \{|location /panel/ {\
-    include /etc/nginx/snippets/subauth.conf;|;
+  include /etc/nginx/snippets/subauth.conf;|;
     /^[[:space:]]*proxy_pass/ s|:8333;|:8333$request_uri;|;
     ' /etc/nginx/apps/panel.conf
 
-    sed -E '/^include \/etc\/nginx\/snippets\/subauth\.conf;$/d' /etc/nginx/apps/panel.conf > /etc/nginx/apps/.panel.conf
+    sed -E '/^[[:space:]]*include \/etc\/nginx\/snippets\/subauth\.conf;$/d' /etc/nginx/apps/panel.conf > /etc/nginx/apps/.panel.conf
 
     sed -E '
     s|^location /panel/ \{|location = /panel/login {|;
