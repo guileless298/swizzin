@@ -20,11 +20,6 @@ map \$host \$matched_domain {
 upstream auth {
     server 127.0.0.1:8888;
 }
-
-map \$auth_set_cookie \$auth_bypass {
-    ""      0;
-    default 1;
-}
 CONF
 
 cat > /etc/nginx/snippets/subauth.conf << CONF
@@ -39,10 +34,6 @@ set $auth_htpasswd "/etc/htpasswd";
 
 location = auth {
     internal;
-    if ($auth_bypass = 1) {
-        add_header Set-Cookie $auth_set_cookie;
-        return 200;
-    }
     proxy_pass http://auth;
     proxy_pass_request_body off;
     proxy_set_header X-Auth-Path $auth_htpasswd;
@@ -71,10 +62,6 @@ location @auth_no_panel {
     return 401;
 }
 
-location @auth_success {
-    rewrite ^ $uri$is_args$args last;
-}
-
 location ~ ^/panel/(?<service>[a-z]+)$ {
   return 301 $scheme://$service.$matched_domain/;
 }
@@ -92,7 +79,11 @@ s|server_name .*;|server_name $hostname *.$hostname;|g;
 
 mkdir /srv/auth
 cat > /srv/auth/login.js << LOGIN
-alert("test");
+function login() {
+var username = document.getElementById("basic-username").value;
+var password = document.getElementById("basic-password").value;
+
+}
 LOGIN
 
 write_auth_server
