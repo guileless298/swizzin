@@ -54,7 +54,7 @@ use tiny_http::{Header, Method, Request, Response, ResponseBox, Server, StatusCo
 
 const BINDING: &str = "127.0.0.1:8888";
 const PRIMARY_SERVICE: &str = "panel";
-const PRIMARY_COOKIE_DOMAIN: &str = "example.com";
+const PRIMARY_COOKIE_DOMAIN: &str = "$hostname";
 const KEY_COOKIE: CookieInfo = CookieInfo {
     primary_name: "swizzin_session",
     #[deprecated(note = "UNUSED")]
