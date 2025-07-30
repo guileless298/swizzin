@@ -234,7 +234,7 @@ fn handle_get(
 
     // Get auth methods
     let b_auth = get_basic_auth(&details.basic_auth)?;
-    let (client_key, issue_key) = get_client_key(details)?;
+    let client_key = get_client_key(details)?;
     let jwe_codec = get_jwe_codec(server_secret, &client_key)?;
     let s_jwe = get_jwe(
         &jwe_codec.decrypter,
@@ -300,20 +300,20 @@ fn handle_get(
     add_accepted_auth(accepted_auth, &mut response)?;
     add_auth_cookie(issue_s_auth, &mut response, false, &jwe_codec, &details)?;
     add_auth_cookie(issue_p_auth, &mut response, true, &jwe_codec, &details)?;
-    add_client_key(issue_key.then(|| client_key.as_slice()), &mut response)?;
+    add_client_key(client_key.as_slice(), &mut response, &details)?;
     Ok(response.boxed())
 }
 
-fn get_client_key(details: &RequestDetails) -> Result<(Vec<u8>, bool), ValidationFailure> {
+fn get_client_key(details: &RequestDetails) -> Result<Vec<u8>, ValidationFailure> {
     let cookies = &details.cookies;
     let key = cookies
         .client_key
         .as_ref()
         .and_then(|k| BASE64_STANDARD.decode(k).ok());
     match key {
-        None => Ok((generate_client_key()?, true)),
-        Some(k1) if k1.len() < JWE_MIN_KEY_SIZE => Ok((generate_client_key()?, false)),
-        Some(k1) => Ok((k1, false)),
+        None => Ok(generate_client_key()?),
+        Some(k1) if k1.len() < JWE_MIN_KEY_SIZE => Ok(generate_client_key()?),
+        Some(k1) => Ok(k1),
     }
 }
 
@@ -439,7 +439,7 @@ fn add_auth_cookie<T: io::Read, E: JweEncrypter, D: JweDecrypter>(
 
     let jwe = issue_jwe(&codec.encrypter, auth.to_owned(), request_details)?;
     let expiry = request_details.timestamp + COOKIE_DURATION;
-    let cookie = make_cookie(cookie_key, &jwe, service, Some(&expiry));
+    let cookie = make_cookie(cookie_key, &jwe, service, &expiry);
     let header =
         Header::from_bytes(x_header, cookie.as_bytes()).map_err(|_| ValidationFailure::Internal)?;
 
@@ -466,21 +466,20 @@ fn issue_jwe<E: JweEncrypter>(
 }
 
 fn add_client_key<T: io::Read>(
-    key: Option<&[u8]>,
+    key: &[u8],
     response: &mut Response<T>,
-) -> Result<bool, ValidationFailure> {
-    let Some(key) = key else {
-        return Ok(false);
-    };
+    request_details: &RequestDetails,
+) -> Result<(), ValidationFailure> {
     let encoded = BASE64_STANDARD.encode(key);
-    let cookie = make_cookie(KEY_COOKIE.primary_name, &encoded, PRIMARY_SERVICE, None);
+    let expiry = request_details.timestamp + COOKIE_DURATION;
+    let cookie = make_cookie(KEY_COOKIE.primary_name, &encoded, PRIMARY_SERVICE, &expiry);
     let header = Header::from_bytes(KEY_COOKIE.x_primary_header, cookie.as_bytes())
         .map_err(|_| ValidationFailure::Internal)?;
     response.add_header(header);
-    Ok(true)
+    Ok(())
 }
 
-fn make_cookie(key: &str, value: &str, service: &str, expiry: Option<&DateTime<Utc>>) -> String {
+fn make_cookie(key: &str, value: &str, service: &str, expiry: &DateTime<Utc>) -> String {
     let d;
     let domain = if service == PRIMARY_SERVICE {
         PRIMARY_COOKIE_DOMAIN
@@ -489,11 +488,8 @@ fn make_cookie(key: &str, value: &str, service: &str, expiry: Option<&DateTime<U
         d.as_str()
     };
 
-    let expires = expiry
-        .map(|e| e.format("Expires=%a, %d %b %Y %H:%M:%S GMT; ").to_string())
-        .unwrap_or_default();
-
-    format!("{key}={value}; Domain={domain};{expires} HttpOnly; Path=/; SameSite=Lax; Secure")
+    let expires = expiry.format("%a, %d %b %Y %H:%M:%S GMT");
+    format!("{key}={value}; Domain={domain}; Expires={expires}; HttpOnly; Path=/; SameSite=Lax; Secure")
 }
 
 MAIN
