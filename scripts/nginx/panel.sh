@@ -36,7 +36,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     ' /etc/nginx/apps/panel.conf
 
     sed -E '
-    s|^location /panel/ \{|location /panel/login {|;
+    s|^location /panel/ \{|location = /panel/login {|;
     1i\
 
     ' /etc/nginx/apps/panel.conf > /etc/nginx/apps/.panel.conf
