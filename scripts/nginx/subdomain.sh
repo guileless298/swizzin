@@ -72,25 +72,38 @@ location = auth {
 
 location @auth_failure_400 {
     include /etc/nginx/snippets/subauth-failure.sh;
-    error_page 502 503 504 = @auth_no_panel;
+    error_page 502 503 504 = @auth_no_panel_400;
     return 400;
 }
 
 location @auth_failure_401 {
     include /etc/nginx/snippets/subauth-failure.sh;
-    error_page 502 503 504 = @auth_no_panel;
+    error_page 502 503 504 = @auth_no_panel_401;
     return 401;
 }
 
 location @auth_failure_403 {
     include /etc/nginx/snippets/subauth-failure.sh;
-    error_page 502 503 504 = @auth_no_panel;
+    error_page 502 503 504 = @auth_no_panel_403;
     return 403;
 }
 
-location @auth_no_panel {
+location @auth_no_panel_400 {
     add_header WWW-Authenticate 'Basic realm="What\'s the password?"';
     add_header Set-Cookie \$auth_key_cookie always;
+    return 400;
+}
+
+location @auth_no_panel_401 {
+    add_header WWW-Authenticate 'Basic realm="What\'s the password?"';
+    add_header Set-Cookie \$auth_key_cookie always;
+    return 401;
+}
+
+location @auth_no_panel_403 {
+    add_header WWW-Authenticate 'Basic realm="What\'s the password?"';
+    add_header Set-Cookie \$auth_key_cookie always;
+    return 403;
 }
 
 location ~ ^/panel/(?<service>[a-z]+)$ {
