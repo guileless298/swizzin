@@ -36,6 +36,7 @@ location = auth {
     internal;
     proxy_pass http://auth;
     proxy_pass_request_body off;
+    proxy_set_header X-Service $matched_subdomain;
     proxy_set_header X-Auth-Path $auth_htpasswd;
     proxy_set_header X-Default-Auth-Path "/etc/htpasswd";
     proxy_set_header Host $host;
