@@ -50,7 +50,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
     /^[[:space:]]*rewrite/d;
-    /^[[:space:]]*proxy_pass/ s|/bazarr/;|$request_uri;|;
+    /^[[:space:]]*proxy_pass/ s|/bazarr/(api)?;|$request_uri;|;
     /^location \/bazarr\/ \{/a\
     include /etc/nginx/snippets/subauth.conf;
     ' /etc/nginx/apps/bazarr.conf
