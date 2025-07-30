@@ -30,6 +30,10 @@ AUTOBRRUC
     # change listening addr to 127.0.0.1
     sed -i 's|host = "0.0.0.0"|host = "127.0.0.1"|g' "/home/${user}/.config/autobrr/config.toml"
 
+    if [[ -f /install/.subdomain.lock ]]; then
+        sed -i 's|baseUrl = .+|baseUrl = "/"|g' "/home/${user}/.config/autobrr/config.toml"
+    fi
+
     # Restart autobrr for all user after changing port
     echo_log_only "Restarting autobrr for ${user}"
     systemctl try-restart autobrr@${user}
