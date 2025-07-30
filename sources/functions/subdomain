@@ -216,12 +216,6 @@ fn handle_request(
     request: &Request,
     server_secret: &[u8],
 ) -> Result<ResponseBox, ValidationFailure> {
-    if request.method() != &Method::Get {
-        let mut response = Response::empty(StatusCode(405));
-        response.add_header(Header::from_bytes("Allow", "GET").unwrap());
-        return Ok(response.boxed());
-    }
-
     let details = get_request_details(&request)?;
     handle_get(&details, &server_secret)
 }
