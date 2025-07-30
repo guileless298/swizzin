@@ -48,7 +48,7 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
 add_header Set-Cookie $auth_key_cookie always;
 
-sub_filter "/static/js/httpauth.js" "//auth.$matched_domain/login.js";
+sub_filter "\"/static/js/httpauth.js" "\"//auth.$matched_domain/login.js";
 sub_filter "\"/static/" "\"//$matched_domain/static/";
 sub_filter_once off;
 
