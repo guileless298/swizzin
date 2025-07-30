@@ -80,7 +80,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     sed -Ei '
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
-    s|^location /transmission\.downloads \{|location /panel/transmission.downloads/ {\
+    s|^location /transmission\.downloads \{|location /panel/transmission.downloads {\
     include /etc/nginx/snippets/subauth.conf;|
     ' /etc/nginx/apps/tmsindex.conf
     # shellcheck disable=SC2016

@@ -72,7 +72,7 @@ DRP
             sed -Ei '
             /^[[:space:]]*auth_basic/d;
             /^[[:space:]]*auth_basic_user_file/d;
-            s|^location /deluge\.downloads \{|location /panel/deluge.downloads/ {\
+            s|^location /deluge\.downloads \{|location /panel/deluge.downloads {\
   include /etc/nginx/snippets/subauth.conf;|
             ' /etc/nginx/apps/dindex.conf
             # shellcheck disable=SC2016
