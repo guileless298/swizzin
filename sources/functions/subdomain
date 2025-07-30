@@ -54,7 +54,7 @@ use tiny_http::{Header, Method, Request, Response, ResponseBox, Server, StatusCo
 
 const BINDING: &str = "127.0.0.1:8888";
 const PRIMARY_SERVICE: &str = "panel";
-const PRIMARY_COOKIE_DOMAIN: &str = "$hostname";
+const PRIMARY_COOKIE_DOMAIN: &str = "example.com";
 const KEY_COOKIE: CookieInfo = CookieInfo {
     primary_name: "swizzin_key",
     #[deprecated(note = "UNUSED")]
@@ -269,11 +269,11 @@ fn handle_get(
         _ => 401,
     };
 
-    // Determine service user
-    let user = match (s_valid.0, p_valid.0, b_valid.0) {
-        (_, _, true) => Some(b_auth.as_ref().unwrap().username.as_str()),
-        (true, _, _) => Some(s_auth.unwrap().username.as_str()),
-        (_, true, _) => Some(p_auth.unwrap().username.as_str()),
+    // Determine service auth
+    let accepted_auth = match (s_valid.0, p_valid.0, b_valid.0) {
+        (_, _, true) => b_auth.as_ref(),
+        (true, _, _) => s_auth,
+        (_, true, _) => p_auth,
         _ => None,
     };
 
@@ -297,9 +297,9 @@ fn handle_get(
     };
 
     let mut response = Response::empty(StatusCode(status));
-    add_x_user(user, &mut response)?;
-    add_auth(issue_s_auth, &mut response, false, &jwe_codec, &details)?;
-    add_auth(issue_p_auth, &mut response, true, &jwe_codec, &details)?;
+    add_accepted_auth(accepted_auth, &mut response)?;
+    add_auth_cookie(issue_s_auth, &mut response, false, &jwe_codec, &details)?;
+    add_auth_cookie(issue_p_auth, &mut response, true, &jwe_codec, &details)?;
     add_client_key(issue_key.then(|| client_key.as_slice()), &mut response)?;
     Ok(response.boxed())
 }
@@ -390,16 +390,29 @@ fn check_auth(auth: Option<&Auth>, request_details: &RequestDetails) -> (bool, b
     (service_valid, primary_valid)
 }
 
-fn add_x_user<T: io::Read>(user: Option<&str>, response: &mut Response<T>) -> Result<bool, ValidationFailure> {
-    let Some(user) = user else {
+fn add_accepted_auth<T: io::Read>(
+    auth: Option<&Auth>,
+    response: &mut Response<T>,
+) -> Result<bool, ValidationFailure> {
+    let Some(auth) = auth else {
         return Ok(false);
     };
-    let header = Header::from_bytes("X-Remote-User", user.as_bytes()).map_err(|_| ValidationFailure::Internal)?;
-    response.add_header(header);
+
+    let raw_auth = format!("{}:{}", auth.username, auth.password);
+    let encoded = BASE64_STANDARD.encode(raw_auth.as_bytes());
+    let authorization = format!("Basic {}", encoded);
+
+    let user = Header::from_bytes("X-Remote-User", auth.username.as_bytes())
+        .map_err(|_| ValidationFailure::Internal)?;
+    let auth = Header::from_bytes("X-Auth", authorization.as_bytes())
+        .map_err(|_| ValidationFailure::Internal)?;
+
+    response.add_header(user);
+    response.add_header(auth);
     Ok(true)
 }
 
-fn add_auth<T: io::Read, E: JweEncrypter, D: JweDecrypter>(
+fn add_auth_cookie<T: io::Read, E: JweEncrypter, D: JweDecrypter>(
     auth: Option<&Auth>,
     response: &mut Response<T>,
     primary: bool,

@@ -25,10 +25,12 @@ CONF
 cat > /etc/nginx/snippets/subauth.conf << 'CONF'
 auth_request auth;
 auth_request_set $auth_remote_user $upstream_http_x_remote_user;
+auth_request_set $auth_authorization $upstream_http_x_auth;
 auth_request_set $auth_key_cookie $upstream_http_x_key_cookie;
 auth_request_set $auth_cookie $upstream_http_x_auth_cookie;
 auth_request_set $auth_s_cookie $upstream_http_x_sauth_cookie;
 auth_request_set $auth_status $upstream_status;
+add_header Authorization $auth_authorization;
 add_header Set-Cookie $auth_key_cookie always;
 add_header Set-Cookie $auth_cookie always;
 add_header Set-Cookie $auth_s_cookie always;
