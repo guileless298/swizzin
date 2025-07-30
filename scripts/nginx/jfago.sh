@@ -23,4 +23,8 @@ if [[ -f /install/.subdomain.lock ]]; then
     s|^location \^~ /jfa-go \{|location /jfa-go/ {|;
     /^[[:space:]]*proxy_pass/ s|/jfa-go;|$request_uri;|
     ' /etc/nginx/apps/jfago.conf
+    sed -Ei '
+    /^\[jellyfin\]$/,/^\[/ s|^server([[:space:]]*)=(.+)/jellyfin|server\1=\2|
+    /^\[ui\]$/,/^\[/ s|^url_base([[:space:]]*)=.*$|url_base\1= /|
+    ' /opt/jfago/config/config.ini
 fi
