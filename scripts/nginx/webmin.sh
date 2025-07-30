@@ -37,7 +37,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*proxy_redirect/d;
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
-    /^[[:space:]]*proxy_pass/ s|:10000;|:10000\$request_uri;|;
+    /^[[:space:]]*proxy_pass/ s|:10000/;|:10000\$request_uri;|;
     /^location \/webmin\/ \{/a\
     set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${MASTER}\";\\
     include /etc/nginx/snippets/subauth.conf;
