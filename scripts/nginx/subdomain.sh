@@ -72,7 +72,7 @@ location = auth {
 }
 
 location = /panel/logout {
-    add_header Set-Cookie "swizzin_key=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    add_header Set-Cookie "swizzin_key=deleted; Domain=$matched_domain; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Path=/; SameSite=Lax; Secure";
     return 301 $scheme://$matched_domain/;
 }
 
