@@ -22,11 +22,17 @@ upstream auth {
 }
 CONF
 
-cat > /etc/nginx/snippets/subauth.conf << CONF
+cat > /etc/nginx/snippets/subauth.conf << 'CONF'
 auth_request auth;
-auth_request_set \$auth_set_cookie \$upstream_http_set_cookie;
-add_header Set-Cookie \$auth_set_cookie;
-error_page 401 403 = @auth_failure;
+auth_request_set $auth_remote_user $upstream_http_x_remote_user;
+auth_request_set $auth_key_cookie $upstream_http_x_key_cookie;
+auth_request_set $auth_cookie $upstream_http_x_auth_cookie;
+auth_request_set $auth_s_cookie $upstream_http_x_sauth_cookie;
+auth_request_set $auth_status $upstream_status;
+add_header Set-Cookie $auth_key_cookie always;
+add_header Set-Cookie $auth_cookie always;
+add_header Set-Cookie $auth_s_cookie always;
+error_page 400 401 403 = @auth_failure;
 CONF
 
 cat > /etc/nginx/apps/subdomain.conf << 'CONF'
@@ -52,15 +58,22 @@ location @auth_failure {
     proxy_set_header Content-Length "";
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    add_header Set-Cookie $auth_key_cookie always;
+
     sub_filter "/static/js/httpauth.js" "//auth.$matched_domain/login.js";
     sub_filter "\"/static/" "\"//$matched_domain/static/";
     sub_filter_once off;
+
+    proxy_intercept_errors on;
     error_page 502 503 504 = @auth_no_panel;
+    return $auth_status;
 }
 
 location @auth_no_panel {
     add_header WWW-Authenticate 'Basic realm="What\'s the password?"';
-    return 401;
+    add_header Set-Cookie \$auth_key_cookie always;
+    return $auth_status;
 }
 
 location ~ ^/panel/(?<service>[a-z]+)$ {
