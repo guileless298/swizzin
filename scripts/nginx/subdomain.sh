@@ -117,7 +117,7 @@ fetch('/', {
   method: 'GET',
   credentials: 'include',
   headers: {
-    'Authorization': 'Basic ' + bota(username + ':' + password),
+    'Authorization': 'Basic ' + btoa(username + ':' + password),
     'Content-Type': 'application/json'
   }
 }).then(res => {
