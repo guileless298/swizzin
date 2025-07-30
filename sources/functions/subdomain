@@ -269,6 +269,14 @@ fn handle_get(
         _ => 401,
     };
 
+    // Determine service user
+    let user = match (s_valid.0, p_valid.0, b_valid.0) {
+        (_, _, true) => Some(b_auth.as_ref().unwrap().username.as_str()),
+        (true, _, _) => Some(s_auth.unwrap().username.as_str()),
+        (_, true, _) => Some(p_auth.unwrap().username.as_str()),
+        _ => None,
+    };
+
     // Determine which cookies need to be issued
     let reissue_before = details.timestamp - REFRESH_AFTER;
     let issue_s_auth = match (s_valid.0, p_valid.0, b_valid.0) {
@@ -289,6 +297,7 @@ fn handle_get(
     };
 
     let mut response = Response::empty(StatusCode(status));
+    add_x_user(user, &mut response)?;
     add_auth(issue_s_auth, &mut response, false, &jwe_codec, &details)?;
     add_auth(issue_p_auth, &mut response, true, &jwe_codec, &details)?;
     add_client_key(issue_key.then(|| client_key.as_slice()), &mut response)?;
@@ -320,8 +329,8 @@ fn get_jwe_codec(
     server_secret: &[u8],
     client_key: &[u8],
 ) -> Result<JweCodec<impl JweEncrypter, impl JweDecrypter>, ValidationFailure> {
-    let mut hmac = Hmac::<Sha256>::new_from_slice(server_secret)
-        .map_err(|_| ValidationFailure::Internal)?;
+    let mut hmac =
+        Hmac::<Sha256>::new_from_slice(server_secret).map_err(|_| ValidationFailure::Internal)?;
     hmac.update(client_key);
     let derived = hmac.finalize().into_bytes();
     Ok(JweCodec {
@@ -379,6 +388,15 @@ fn check_auth(auth: Option<&Auth>, request_details: &RequestDetails) -> (bool, b
         .check(&auth.username, &auth.password);
 
     (service_valid, primary_valid)
+}
+
+fn add_x_user<T: io::Read>(user: Option<&str>, response: &mut Response<T>) -> Result<bool, ValidationFailure> {
+    let Some(user) = user else {
+        return Ok(false);
+    };
+    let header = Header::from_bytes("X-Remote-User", user.as_bytes()).map_err(|_| ValidationFailure::Internal)?;
+    response.add_header(header);
+    Ok(true)
 }
 
 fn add_auth<T: io::Read, E: JweEncrypter, D: JweDecrypter>(
