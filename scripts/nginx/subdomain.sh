@@ -20,6 +20,12 @@ map \$host \$matched_domain {
 upstream auth {
     server 127.0.0.1:8888;
 }
+
+map \$auth_status \$auth_return {
+    400 400;
+    403 403;
+    default 401;
+}
 CONF
 
 cat > /etc/nginx/snippets/subauth.conf << 'CONF'
@@ -67,13 +73,13 @@ location @auth_failure {
 
     proxy_intercept_errors on;
     error_page 502 503 504 = @auth_no_panel;
-    return $auth_status;
+    return $auth_return;
 }
 
 location @auth_no_panel {
     add_header WWW-Authenticate 'Basic realm="What\'s the password?"';
     add_header Set-Cookie \$auth_key_cookie always;
-    return $auth_status;
+    return $auth_return;
 }
 
 location ~ ^/panel/(?<service>[a-z]+)$ {
