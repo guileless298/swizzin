@@ -56,7 +56,7 @@ const BINDING: &str = "127.0.0.1:8888";
 const PRIMARY_SERVICE: &str = "panel";
 const PRIMARY_COOKIE_DOMAIN: &str = "$hostname";
 const KEY_COOKIE: CookieInfo = CookieInfo {
-    primary_name: "swizzin_session",
+    primary_name: "swizzin_key",
     #[deprecated(note = "UNUSED")]
     service_name: "",
     x_primary_header: "X-Key-Cookie",
