@@ -30,10 +30,10 @@ auth_request_set $auth_key_cookie $upstream_http_x_key_cookie;
 auth_request_set $auth_cookie $upstream_http_x_auth_cookie;
 auth_request_set $auth_s_cookie $upstream_http_x_sauth_cookie;
 auth_request_set $auth_status $upstream_status;
-add_header Authorization $auth_authorization;
 add_header Set-Cookie $auth_key_cookie always;
 add_header Set-Cookie $auth_cookie always;
 add_header Set-Cookie $auth_s_cookie always;
+proxy_set_header Authorization $auth_authorization;
 error_page 400 = @auth_failure_400;
 error_page 401 = @auth_failure_401;
 error_page 403 = @auth_failure_403;
@@ -147,6 +147,10 @@ fetch('/', {
     window.alert("Unknown error");
   }
 });
+}
+document.onkeypress = enter;
+function enter(e) {
+if (e.which == 13) { login(); }
 }
 LOGIN
 
