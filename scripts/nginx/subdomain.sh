@@ -113,7 +113,16 @@ cat > /srv/auth/login.js << LOGIN
 function login() {
 var username = document.getElementById("basic-username").value;
 var password = document.getElementById("basic-password").value;
-
+fetch('/', {
+  method: 'GET',
+  credentials: 'include',
+  headers: {
+    'Authorization': 'Basic ' + bota(username + ':' + password),
+    'Content-Type': 'application/json'
+  }
+}).then(res => {
+  console.log(res);
+});
 }
 LOGIN
 
