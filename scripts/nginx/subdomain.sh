@@ -20,12 +20,6 @@ map \$host \$matched_domain {
 upstream auth {
     server 127.0.0.1:8888;
 }
-
-map \$auth_status \$auth_return {
-    400 400;
-    403 403;
-    default 401;
-}
 CONF
 
 cat > /etc/nginx/snippets/subauth.conf << 'CONF'
@@ -38,7 +32,27 @@ auth_request_set $auth_status $upstream_status;
 add_header Set-Cookie $auth_key_cookie always;
 add_header Set-Cookie $auth_cookie always;
 add_header Set-Cookie $auth_s_cookie always;
-error_page 400 401 403 = @auth_failure;
+error_page 400 = @auth_failure_400;
+error_page 401 = @auth_failure_401;
+error_page 403 = @auth_failure_403;
+CONF
+
+cat /etc/nginx/snippets/subauth-failure.sh << 'CONF'
+rewrite ^ /login break;
+proxy_pass http://127.0.0.1:8333;
+proxy_pass_request_body off;
+proxy_set_header Host $host;
+proxy_set_header Content-Length "";
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+add_header Set-Cookie $auth_key_cookie always;
+
+sub_filter "/static/js/httpauth.js" "//auth.$matched_domain/login.js";
+sub_filter "\"/static/" "\"//$matched_domain/static/";
+sub_filter_once off;
+
+proxy_intercept_errors on;
 CONF
 
 cat > /etc/nginx/apps/subdomain.conf << 'CONF'
@@ -56,30 +70,27 @@ location = auth {
     proxy_set_header Authorization $http_authorization;
 }
 
-location @auth_failure {
-    rewrite ^ /login break;
-    proxy_pass http://127.0.0.1:8333;
-    proxy_pass_request_body off;
-    proxy_set_header Host $host;
-    proxy_set_header Content-Length "";
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+location @auth_failure_400 {
+    include /etc/nginx/snippets/subauth-failure.sh;
+    error_page 502 503 504 = 400 @auth_no_panel;
+    return 400;
+}
 
-    add_header Set-Cookie $auth_key_cookie always;
+location @auth_failure_401 {
+    include /etc/nginx/snippets/subauth-failure.sh;
+    error_page 502 503 504 = 401 @auth_no_panel;
+    return 401;
+}
 
-    sub_filter "/static/js/httpauth.js" "//auth.$matched_domain/login.js";
-    sub_filter "\"/static/" "\"//$matched_domain/static/";
-    sub_filter_once off;
-
-    proxy_intercept_errors on;
-    error_page 502 503 504 = @auth_no_panel;
-    return $auth_return;
+location @auth_failure_403 {
+    include /etc/nginx/snippets/subauth-failure.sh;
+    error_page 502 503 504 = 403 @auth_no_panel;
+    return 403;
 }
 
 location @auth_no_panel {
     add_header WWW-Authenticate 'Basic realm="What\'s the password?"';
     add_header Set-Cookie \$auth_key_cookie always;
-    return $auth_return;
 }
 
 location ~ ^/panel/(?<service>[a-z]+)$ {
