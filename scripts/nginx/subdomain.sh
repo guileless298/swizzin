@@ -37,7 +37,7 @@ error_page 401 = @auth_failure_401;
 error_page 403 = @auth_failure_403;
 CONF
 
-cat /etc/nginx/snippets/subauth-failure.sh << 'CONF'
+cat > /etc/nginx/snippets/subauth-failure.sh << 'CONF'
 rewrite ^ /login break;
 proxy_pass http://127.0.0.1:8333;
 proxy_pass_request_body off;
