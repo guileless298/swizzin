@@ -13,6 +13,11 @@ s|server_name .*;|server_name $hostname;|g;
 /root \/srv\/;/,/include/{//!d;};
 " /etc/nginx/sites-enabled/default
 
+echo_progress_start "Relocating fancyindex"
+mv /srv/panel/* /srv
+rm -rf /srv/panel
+echo_progress_done
+
 rm /install/.subdomain.lock
 
 bash /usr/local/bin/swizzin/upgrade/nginx.sh

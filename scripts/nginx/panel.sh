@@ -33,20 +33,10 @@ if [[ -f /install/.subdomain.lock ]]; then
     sed -Ei '
     s|^location / \{|location /panel/ {\
   include /etc/nginx/snippets/subauth.conf;|;
-    /^[[:space:]]*proxy_pass/ s|:8333;|:8333$request_uri;|;
+    /^[[:space:]]*proxy_pass/ s|:8333;|:8333$request_uri;|
     ' /etc/nginx/apps/panel.conf
 
-    sed -E '/^[[:space:]]*include \/etc\/nginx\/snippets\/subauth\.conf;$/d' /etc/nginx/apps/panel.conf > /etc/nginx/apps/.panel.conf
-
-    sed -E '
-    s|^location /panel/ \{|location = /panel/login {|;
-    1i\
-
-    ' /etc/nginx/apps/.panel.conf >> /etc/nginx/apps/panel.conf
-    sed -E '
-    s|^location /panel/ \{|location /panel/static/ {|;
-    1i\
-
-    ' /etc/nginx/apps/.panel.conf >> /etc/nginx/apps/panel.conf
-    rm /etc/nginx/apps/.panel.conf
+    sed -Ei '
+    s|^location /fancyindex \{|location /panel/fancyindex {|
+    ' /etc/nginx/apps/fancyindex.conf
 fi

@@ -32,6 +32,10 @@ _install() {
 }
 
 _nginx() {
+    echo_progress_start "Relocating fancyindex"
+    mkdir /srv/panel
+    mv /srv/fancyindex /srv/panel
+    echo_progress_done
     bash /usr/local/bin/swizzin/upgrade/nginx.sh
 }
 
