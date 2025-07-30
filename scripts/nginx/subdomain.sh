@@ -51,8 +51,6 @@ add_header Set-Cookie $auth_key_cookie always;
 sub_filter "\"/static/js/httpauth.js" "\"//auth.$matched_domain/login.js";
 sub_filter "\"/static/" "\"//$matched_domain/static/";
 sub_filter_once off;
-
-proxy_intercept_errors on;
 CONF
 
 cat > /etc/nginx/apps/subdomain.conf << 'CONF'
@@ -67,8 +65,8 @@ location = auth {
     proxy_set_header X-Primary-Auth-Path "/etc/htpasswd";
     proxy_set_header Host $host;
     proxy_set_header Content-Length "";
-    proxy_set_header Authorization $http_authorization;
     proxy_set_header Cookie $http_cookie;
+    proxy_set_header Authorization $http_authorization;
 }
 
 location @auth_failure_400 {
@@ -135,7 +133,17 @@ fetch('/', {
     'Content-Type': 'application/json'
   }
 }).then(res => {
-  console.log(res);
+  if (res.status == 400) {
+    window.alert("Bad Request");
+  } else if (res.status == 401) {
+    window.alert("Incorrect username or password");
+  } else if (res.status == 403) {
+    window.alert("Credentials invalid for this service");
+  } else if (res.status == 200) {
+    window.location.reload();
+  } else {
+    window.alert("Unknown error");
+  }
 });
 }
 LOGIN
