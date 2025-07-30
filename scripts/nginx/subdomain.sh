@@ -107,7 +107,7 @@ location @auth_no_panel_403 {
     return 403;
 }
 
-location ~ ^/panel/(?<service>[a-z]+)$ {
+location ~ ^/panel/(?<service>[a-z\-]+)$ {
   return 301 $scheme://$service.$matched_domain/;
 }
 CONF
