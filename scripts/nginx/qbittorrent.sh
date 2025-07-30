@@ -76,7 +76,7 @@ if [[ -f /install/.subdomain.lock ]]; then
     sed -Ei '
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
-    s|^([[:space:]])alias|\1rewrite ^/panel/qbittorrent.downloads(.*)$ $1 break;\
+    s|^([[:space:]]*)alias|\1rewrite ^/panel/qbittorrent.downloads(.*)$ $1 break;\
     \1root|;
     s|^location /qbittorrent\.downloads \{|location /panel/qbittorrent.downloads {\
     include /etc/nginx/snippets/subauth.conf;|
