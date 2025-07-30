@@ -72,19 +72,19 @@ location = auth {
 
 location @auth_failure_400 {
     include /etc/nginx/snippets/subauth-failure.sh;
-    error_page 502 503 504 = 400 @auth_no_panel;
+    error_page 502 503 504 = @auth_no_panel;
     return 400;
 }
 
 location @auth_failure_401 {
     include /etc/nginx/snippets/subauth-failure.sh;
-    error_page 502 503 504 = 401 @auth_no_panel;
+    error_page 502 503 504 = @auth_no_panel;
     return 401;
 }
 
 location @auth_failure_403 {
     include /etc/nginx/snippets/subauth-failure.sh;
-    error_page 502 503 504 = 403 @auth_no_panel;
+    error_page 502 503 504 = @auth_no_panel;
     return 403;
 }
 
