@@ -68,6 +68,7 @@ location = auth {
     proxy_set_header Host $host;
     proxy_set_header Content-Length "";
     proxy_set_header Authorization $http_authorization;
+    proxy_set_header Cookie $http_cookie;
 }
 
 location @auth_failure_400 {
