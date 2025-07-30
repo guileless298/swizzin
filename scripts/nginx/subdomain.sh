@@ -71,6 +71,11 @@ location = auth {
     proxy_set_header Authorization $http_authorization;
 }
 
+location = /panel/logout {
+    add_header Set-Cookie "swizzin_key=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    return 301 $scheme://$matched_domain/;
+}
+
 location @auth_failure_400 {
     include /etc/nginx/snippets/subauth-failure.sh;
     error_page 502 503 504 = @auth_no_panel_400;
