@@ -30,7 +30,7 @@ location /bazarr/ {
 
     auth_basic              "What's the password?";
     auth_basic_user_file    /etc/htpasswd.d/htpasswd.${user};
-    
+
     # Allow the Bazarr API through if you enable Auth on the block above
     location /bazarr/api {
         auth_request off;
@@ -43,6 +43,19 @@ BAZN
 sed 's|ip = 0.0.0.0|ip = 127.0.0.1|' -i /opt/bazarr/data/config/config.ini
 # Replace only first occurance of base_url to prevent causing issues.
 sed -i '/^\[general\]$/,/^\[/ s/^base_url = .*/base_url = \/bazarr/' /opt/bazarr/data/config/config.ini
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*rewrite/d;
+    /^[[:space:]]*proxy_pass/ s|/bazarr/(api)?;|$request_uri;|;
+    /^location \/bazarr\/ \{/a\
+    include /etc/nginx/snippets/subauth.conf;
+    ' /etc/nginx/apps/bazarr.conf
+    sed -i '/^\[general\]$/,/^\[/ s/^base_url = .*/base_url =/' /opt/bazarr/data/config/config.ini
+fi
 
 if [[ $isactive == "active" ]]; then
     systemctl start bazarr

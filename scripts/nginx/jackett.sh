@@ -32,6 +32,20 @@ fi
 #sed -i "s/\"AllowExternal.*/\"AllowExternal\": false,/g" /home/${MASTER}/.config/Jackett/ServerConfig.json
 sed -i "s/\"BasePathOverride.*/\"BasePathOverride\": \"\/jackett\",/g" /home/${MASTER}/.config/Jackett/ServerConfig.json
 
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei "
+    /^location \/jackett \{/,/^\}\$/d;
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|/jacket/;|\$request_uri;|;
+    /^location \/jackett\/ \{/a\\
+  set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${MASTER}\";\\
+  include /etc/nginx/snippets/subauth.conf;
+    " /etc/nginx/apps/jackett.conf
+    sed -i "s/\"BasePathOverride.*/\"BasePathOverride\": \"\",/g" /home/${MASTER}/.config/Jackett/ServerConfig.json
+fi
+
 if [[ $isactive == "active" ]]; then
     systemctl start jackett@$MASTER
 fi

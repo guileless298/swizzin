@@ -28,3 +28,17 @@ PYLOAD
     sed -i 's/"Path prefix" = /"Path prefix" = \/pyload/g' /opt/pyload/pyload.conf
     sed -i 's/"IP" = 0.0.0.0/"IP" = 127.0.0.1/g' /opt/pyload/pyload.conf
 fi
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei "
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*sub_filter/d;
+    /^[[:space:]]*proxy_pass/ s|:8000/;|:8000\$request_uri;|;
+    /^location \/pyload\/ \{/a\\
+  set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${user}\";\\
+  include /etc/nginx/snippets/subauth.conf;
+    " /etc/nginx/apps/pyload.conf
+    sed -i 's/"Path prefix" = /"Path prefix" =/g' /opt/pyload/pyload.conf
+fi

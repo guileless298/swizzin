@@ -23,3 +23,7 @@ location /librespeed {
 }
 RAP
 fi
+
+if [[ -f /install/.subdomain.lock ]]; then
+    sed -i 's|^location /librespeed \{|location /librespeed/ {|;' /etc/nginx/apps/librespeed.conf
+fi

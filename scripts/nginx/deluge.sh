@@ -24,7 +24,7 @@ location /deluge.downloads {
 
   location ~* \.php$ {
 
-  } 
+  }
 }
 DIN
 fi
@@ -68,5 +68,25 @@ location /deluge/ {
   proxy_pass http://$remote_user.deluge;
 }
 DRP
+        if [[ -f /install/.subdomain.lock ]]; then
+            sed -Ei '
+            /^[[:space:]]*auth_basic/d;
+            /^[[:space:]]*auth_basic_user_file/d;
+            s|^location /deluge\.downloads \{|location /panel/deluge.downloads {\
+  include /etc/nginx/snippets/subauth.conf;|
+            ' /etc/nginx/apps/dindex.conf
+            # shellcheck disable=SC2016
+            sed -Ei '
+            /^location \/deluge \{/,/^\}$/d;
+            /^[[:space:]]*auth_basic/d;
+            /^[[:space:]]*auth_basic_user_file/d;
+            /^[[:space:]]*proxy_set_header[[:space:]]+X-Deluge-Base/d;
+            /^[[:space:]]*rewrite/d;
+            /^[[:space:]]*proxy_pass/ s|\$remote_user\.deluge;|$auth_remote_user.deluge$request_uri;|;
+            /^location \/deluge\/ \{/a\
+  include /etc/nginx/snippets/subauth.conf;\
+  auth_request_set $auth_remote_user $upstream_http_x_remote_user;
+            ' /etc/nginx/apps/deluge.conf
+        fi
     fi
 done

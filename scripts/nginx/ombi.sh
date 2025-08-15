@@ -10,8 +10,8 @@
 #   under the GPL along with build & install instructions.
 
 cat > /etc/nginx/apps/ombi.conf << 'RAD'
-location /ombi {		
-     return 301 $scheme://$host/ombi/;		
+location /ombi {
+     return 301 $scheme://$host/ombi/;
 }
 location ^~ /ombi/ {
     proxy_pass http://127.0.0.1:3000/ombi/;
@@ -46,6 +46,19 @@ cat > /etc/systemd/system/ombi.service.d/override.conf << CONF
 ExecStart=
 ExecStart=/opt/Ombi/Ombi --baseurl /ombi --host http://127.0.0.1:3000 --storage /etc/Ombi
 CONF
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /^location \/ombi \{/,/^\}$/d;
+    /^if \(/,/^\}$/d;
+    /^[[:space:]]*proxy_pass/ s|/ombi/;|$request_uri;|;
+    s|^location \^~ /ombi/ \{|location /ombi/ {\
+    include /etc/nginx/snippets/subauth.conf;|
+    ' /etc/nginx/apps/ombi.conf
+    sed -i 's/ --baseurl /ombi//g' /etc/systemd/system/ombi.service.d/override.conf
+fi
+
 systemctl daemon-reload
 
 if [[ $status = "active" ]]; then

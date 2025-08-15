@@ -30,8 +30,25 @@ AUTOBRRUC
     # change listening addr to 127.0.0.1
     sed -i 's|host = "0.0.0.0"|host = "127.0.0.1"|g' "/home/${user}/.config/autobrr/config.toml"
 
+    if [[ -f /install/.subdomain.lock ]]; then
+        sed -i 's|baseUrl = .+|baseUrl = "/"|g' "/home/${user}/.config/autobrr/config.toml"
+    fi
+
     # Restart autobrr for all user after changing port
     echo_log_only "Restarting autobrr for ${user}"
     systemctl try-restart autobrr@${user}
 
 done
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*rewrite/d;
+    /^[[:space:]]*proxy_pass/ s|\$remote_user\.autobrr;|$auth_remote_user.autobrr$request_uri;|;
+    /^location \/autobrr\/ \{/a\
+    include /etc/nginx/snippets/subauth.conf;\
+    auth_request_set $auth_remote_user $upstream_http_x_remote_user;
+    ' /etc/nginx/apps/autobrr.conf
+fi

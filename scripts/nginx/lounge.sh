@@ -17,6 +17,11 @@ EOF
 sed -i 's/host: undefined,/host: "127.0.0.1",/g' /opt/lounge/.thelounge/config.js
 sed -i 's/reverseProxy: false,/reverseProxy: true,/g' /opt/lounge/.thelounge/config.js
 
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -i '/^[[:space:]]*proxy_pass/ s|:9000/;|:9000$request_uri;|' /etc/nginx/apps/lounge.conf
+fi
+
 if [[ $isactive == "active" ]]; then
     systemctl restart lounge
 fi

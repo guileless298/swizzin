@@ -1,0 +1,16 @@
+#!/bin/bash
+
+function rustup_install() {
+    if [[ ! -d /root/.cargo ]]; then
+        echo_progress_start "Installing rustup"
+        curl https://sh.rustup.rs -sSf | sh -s -- -y >> $log 2>&1
+        . /root/.cargo/env
+        echo_progress_done
+    else
+        rustup_update
+    fi
+}
+
+function rustup_update() {
+    /root/.cargo/bin/rustup self update >> $log 2>&1
+}

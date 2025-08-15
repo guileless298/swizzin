@@ -26,6 +26,20 @@ SRC
 fi
 sed -i "s/web_root.*/web_root = \/sickchill/g" /opt/sickchill/config.ini
 sed -i "s/web_host.*/web_host = 127.0.0.1/g" /opt/sickchill/config.ini
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei "
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|/sickchill;|\$request_uri;|;
+    s|^location /sickchill \{|location /sickchill/ {\\
+    set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${user}\";\\
+    include /etc/nginx/snippets/subauth.conf;|
+    " /etc/nginx/apps/sickchill.conf
+    sed -i "s/web_root.*/web_root =/g" /opt/sickchill/config.ini
+fi
+
 if [[ $isactive == "active" ]]; then
     systemctl start sickchill
 fi

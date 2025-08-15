@@ -39,6 +39,20 @@ location ~ /netdata/(?<ndpath>.*) {
 NET
 fi
 sed -i "s/# bind to = \*/bind to = 127.0.0.1/g" /etc/netdata/netdata.conf
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei "
+    /^location \/netdata \{/,/^\}\$/d;
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|/\$ndpath\$is_args\$args;|\$request_uri;|;
+    s|^location ~ /netdata/\(\?<ndpath>\.\*\) \{|location /netdata/ {\\
+  set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${user}\";\\
+  include /etc/nginx/snippets/subauth.conf;|
+    " /etc/nginx/apps/netdata.conf
+fi
+
 if [[ $isactive == "active" ]]; then
     systemctl restart netdata
 fi

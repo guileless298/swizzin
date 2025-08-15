@@ -20,6 +20,7 @@ done
 
 rm -f /etc/nginx/apps/dindex.conf
 rm -f /etc/nginx/apps/rindex.conf
+rm -f /etc/nginx/apps/qbtindex.conf
 rm -f /etc/nginx/apps/*.scgi.conf
 
 rm -f /etc/nginx/sites-enabled/default

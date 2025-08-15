@@ -14,7 +14,7 @@ location /qbittorrent.downloads {
 
   location ~* \.php\$ {
 
-  } 
+  }
 }
 DIN
 fi
@@ -70,3 +70,29 @@ QBTUC
         fi
     fi
 done
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    s|^([[:space:]]*)alias[[:space:]]+/home/\$remote_user|\1auth_request_set $auth_remote_user $upstream_http_x_remote_user;\
+    rewrite ^/panel/qbittorrent.downloads/?(.*)$ /$1 break;\
+    root /home/$auth_remote_user|;
+    s|^location /qbittorrent\.downloads \{|location /panel/qbittorrent.downloads {\
+    include /etc/nginx/snippets/subauth.conf;|
+    ' /etc/nginx/apps/qbtindex.conf
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*rewrite/d;
+    /^[[:space:]]*proxy_cookie_path/d;
+    s|^location /qbt \{|location /qbt/ {|;
+    /^[[:space:]]*return/ s|/qbittorrent/;|$scheme://qbittorrent.$matched_domain$request_uri;|;
+    /^[[:space:]]*proxy_pass/ s|\$remote_user\.qbittorrent;|$auth_remote_user.qbittorrent$request_uri;|;
+    /^location \/qbittorrent\/ \{/a\
+    include /etc/nginx/snippets/subauth.conf;\
+    auth_request_set $auth_remote_user $upstream_http_x_remote_user;
+    ' /etc/nginx/apps/qbittorrent.conf
+fi

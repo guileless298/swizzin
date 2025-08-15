@@ -22,3 +22,15 @@ location /syncthing/ {
 }
 SYNC
 fi
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei "
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|:8384;|:8384\$request_uri;|;
+    /^location \/syncthing\/ \{/a\\
+  set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${MASTER}\";\\
+  include /etc/nginx/snippets/subauth.conf;
+    " /etc/nginx/apps/syncthing.conf
+fi

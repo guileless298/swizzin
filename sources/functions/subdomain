@@ -1,0 +1,490 @@
+#!/bin/bash
+
+function build_auth_server() {
+    /root/.cargo/bin/cargo build -q --release --manifest-path /opt/subauth/Cargo.toml
+    chown -R subauth: /opt/subauth
+}
+
+function write_auth_server() {
+    hostname=$(grep -m1 "server_name" /etc/nginx/sites-enabled/default | awk '{print $2}' | sed 's/;//g')
+
+    cat > /opt/subauth/Cargo.toml << TOML
+[package]
+name = "subauth"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+htpasswd-verify = "0.3.0"
+josekit = "0.10.3"
+serde = "1.0.219"
+serde_cbor = "0.11.2"
+tiny_http = "0.12.0"
+fastcache = "0.1.7"
+chrono = { version = "0.4.41", features = ["serde"] }
+once_cell = "1.21.3"
+base64 = "0.22.1"
+hmac = "0.12.1"
+sha2 = "0.10.9"
+rand = { version = "0.9.2", features = ["os_rng"] }
+
+TOML
+
+    cat > /opt/subauth/src/main.rs << MAIN
+use base64::prelude::BASE64_STANDARD;
+use base64::Engine;
+use chrono::{DateTime, TimeDelta, Utc};
+use fastcache::Cache;
+use hmac::{Hmac, Mac};
+use htpasswd_verify::Htpasswd;
+use josekit::jwe;
+use josekit::jwe::alg::aesgcmkw::AesgcmkwJweAlgorithm;
+use josekit::jwe::{JweDecrypter, JweEncrypter, JweHeader, A256GCMKW};
+use once_cell::unsync::Lazy;
+use rand::rngs::OsRng;
+use rand::TryRngCore;
+use serde::{Deserialize, Serialize};
+use sha2::Sha256;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::rc::Rc;
+use std::time::Duration;
+use std::{fs, io};
+use tiny_http::{Header, Request, Response, ResponseBox, Server, StatusCode};
+
+const BINDING: &str = "127.0.0.1:8888";
+const PRIMARY_SERVICE: &str = "panel";
+const PRIMARY_COOKIE_DOMAIN: &str = "$hostname";
+const KEY_COOKIE: CookieInfo = CookieInfo {
+    primary_name: "swizzin_key",
+    #[deprecated(note = "UNUSED")]
+    service_name: "",
+    x_primary_header: "X-Key-Cookie",
+    #[deprecated(note = "UNUSED")]
+    x_service_header: "",
+};
+
+const AUTH_COOKIE: CookieInfo = CookieInfo {
+    primary_name: "swizzin_auth",
+    service_name: "swizzin_s_auth",
+    x_primary_header: "X-Auth-Cookie",
+    x_service_header: "X-SAuth-Cookie",
+};
+const COOKIE_DURATION: TimeDelta = TimeDelta::days(7);
+const REFRESH_AFTER: TimeDelta = TimeDelta::days(1);
+const HTPASSWD_CACHE_SIZE: usize = 10;
+const HTPASSWD_CACHE_DURATION: Duration = Duration::from_secs(60);
+
+struct CookieInfo {
+    primary_name: &'static str,
+    service_name: &'static str,
+    x_primary_header: &'static str,
+    x_service_header: &'static str,
+}
+
+const JWE_SPEC: AesgcmkwJweAlgorithm = A256GCMKW;
+const JWE_ALG: &str = "A256KW";
+const JWE_ENC: &str = "A256GCM";
+const JWE_MIN_KEY_SIZE: usize = 32;
+
+struct JweCodec<E: JweEncrypter, D: JweDecrypter> {
+    encrypter: E,
+    decrypter: D,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
+struct Auth {
+    password: String,
+    username: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct JWEPayload {
+    #[serde(with = "chrono::serde::ts_seconds")]
+    issue: DateTime<Utc>,
+    #[serde(flatten)]
+    auth: Auth,
+}
+
+struct RequestDetails {
+    timestamp: DateTime<Utc>,
+    service: String,
+    service_htpasswd: Rc<Htpasswd<'static>>,
+    primary_htpasswd: Rc<Htpasswd<'static>>,
+    cookies: RequestCookies,
+    basic_auth: Option<String>,
+}
+
+#[derive(Default)]
+struct RequestCookies {
+    client_key: Option<String>,
+    primary_auth: Option<String>,
+    service_auth: Option<String>,
+}
+
+enum ValidationFailure {
+    Internal,
+    InvalidHeaders,
+    BadRequest,
+}
+
+fn main() {
+    let server = Server::http(BINDING).expect("Could not start server");
+    let server_secret = fs::read(".secret").expect("Could not read secrets");
+    if server_secret.len() < JWE_MIN_KEY_SIZE {
+        panic!("Secret is less than {} bytes", JWE_MIN_KEY_SIZE);
+    }
+
+    for request in server.incoming_requests() {
+        let response = match handle_request(&request, &server_secret) {
+            Ok(response) => response,
+            Err(ValidationFailure::Internal) => Response::empty(StatusCode(500)).boxed(),
+            Err(ValidationFailure::InvalidHeaders) => Response::empty(StatusCode(428)).boxed(),
+            Err(ValidationFailure::BadRequest) => Response::empty(StatusCode(400)).boxed(),
+        };
+        let _ = request.respond(response);
+    }
+}
+
+fn get_request_details(request: &Request) -> Result<RequestDetails, ValidationFailure> {
+    let mut headers = HashMap::new();
+    for header in request.headers() {
+        headers
+            .entry(header.field.as_str().as_str())
+            .or_insert(header.value.as_str());
+    }
+
+    let basic_auth = headers
+        .remove("Authorization")
+        .and_then(|auth| auth.strip_prefix("Basic "))
+        .map(|s| s.to_string());
+    let service = headers
+        .remove("X-Service")
+        .ok_or(ValidationFailure::InvalidHeaders)?
+        .to_string();
+    let x_service_auth_path = headers
+        .remove("X-Service-Auth-Path")
+        .ok_or(ValidationFailure::InvalidHeaders)?
+        .to_string();
+    let x_primary_auth_path = headers
+        .remove("X-Primary-Auth-Path")
+        .ok_or(ValidationFailure::InvalidHeaders)?
+        .to_string();
+
+    let cookies = headers
+        .remove("Cookie")
+        .map(|header| {
+            header
+                .split(';')
+                .filter_map(|s| s.trim().split_once("="))
+                .collect::<HashMap<&str, &str>>()
+        })
+        .map(|cookies| RequestCookies {
+            client_key: cookies.get(KEY_COOKIE.primary_name).map(|s| s.to_string()),
+            primary_auth: cookies.get(AUTH_COOKIE.primary_name).map(|s| s.to_string()),
+            service_auth: cookies.get(AUTH_COOKIE.service_name).map(|s| s.to_string()),
+        })
+        .unwrap_or_default();
+
+    Ok(RequestDetails {
+        timestamp: Utc::now(),
+        service,
+        service_htpasswd: get_htpasswd(x_service_auth_path)?,
+        primary_htpasswd: get_htpasswd(x_primary_auth_path)?,
+        cookies,
+        basic_auth,
+    })
+}
+
+const HTPASSWD_CACHE: Lazy<Cache<String, Rc<Htpasswd>>> =
+    Lazy::new(|| Cache::new(HTPASSWD_CACHE_SIZE, HTPASSWD_CACHE_DURATION));
+
+fn get_htpasswd(x_auth_path: String) -> Result<Rc<Htpasswd<'static>>, ValidationFailure> {
+    match HTPASSWD_CACHE.get(&x_auth_path) {
+        Some(entry) => Ok(Rc::clone(&entry)),
+        None => {
+            let path = PathBuf::from(&x_auth_path);
+            let data = fs::read_to_string(path).map_err(|_| ValidationFailure::InvalidHeaders)?;
+            let htpasswd = Rc::new(Htpasswd::new_owned(&data));
+            HTPASSWD_CACHE.insert(x_auth_path, Rc::clone(&htpasswd));
+            Ok(htpasswd)
+        }
+    }
+}
+
+fn handle_request(
+    request: &Request,
+    server_secret: &[u8],
+) -> Result<ResponseBox, ValidationFailure> {
+    let details = get_request_details(&request)?;
+    handle_get(&details, &server_secret)
+}
+
+fn handle_get(
+    details: &RequestDetails,
+    server_secret: &[u8],
+) -> Result<ResponseBox, ValidationFailure> {
+    let cookies = &details.cookies;
+
+    // Get auth methods
+    let b_auth = get_basic_auth(&details.basic_auth)?;
+    let client_key = get_client_key(details)?;
+    let jwe_codec = get_jwe_codec(server_secret, &client_key)?;
+    let s_jwe = get_jwe(
+        &jwe_codec.decrypter,
+        &cookies.service_auth,
+        &details.timestamp,
+    );
+    let p_jwe = get_jwe(
+        &jwe_codec.decrypter,
+        &cookies.primary_auth,
+        &details.timestamp,
+    );
+
+    // Extract JWE auth
+    let s_auth = s_jwe.as_ref().map(|jwe| &jwe.auth);
+    let p_auth = p_jwe.as_ref().map(|jwe| &jwe.auth);
+
+    // Check auth
+    let s_valid = check_auth(s_auth, &details);
+    let p_valid = check_auth(p_auth, &details);
+    let b_valid = check_auth(b_auth.as_ref(), &details);
+
+    // Request is valid. Decide response
+    let status = match (
+        s_valid.0, p_valid.0, b_valid.0, s_valid.1, p_valid.1, b_valid.1,
+    ) {
+        (true, _, _, _, _, _) => 204,
+        (_, true, _, _, _, _) => 204,
+        (_, _, true, _, _, _) => 204,
+        (_, _, _, true, _, _) => 403,
+        (_, _, _, _, true, _) => 403,
+        (_, _, _, _, _, true) => 403,
+        _ => 401,
+    };
+
+    // Determine service auth
+    let accepted_auth = match (s_valid.0, p_valid.0, b_valid.0) {
+        (_, _, true) => b_auth.as_ref(),
+        (true, _, _) => s_auth,
+        (_, true, _) => p_auth,
+        _ => None,
+    };
+
+    // Determine which cookies need to be issued
+    let reissue_before = details.timestamp - REFRESH_AFTER;
+    let issue_s_auth = match (s_valid.0, p_valid.0, b_valid.0) {
+        _ if details.service == PRIMARY_SERVICE => None,
+        (false, _, true) => b_auth.as_ref(),
+        (false, true, false) => p_auth,
+        (true, false, true) if b_auth.as_ref() != s_auth => b_auth.as_ref(),
+        (true, _, _) if s_jwe.as_ref().unwrap().issue < reissue_before => s_auth,
+        _ => None,
+    };
+    let issue_p_auth = match (s_valid.1, p_valid.1, b_valid.1) {
+        (_, false, true) if b_valid.0 => b_auth.as_ref(),
+        (true, false, _) if s_valid.0 => s_auth,
+        (_, false, true) => b_auth.as_ref(),
+        (true, false, _) => s_auth,
+        (_, true, _) if p_jwe.as_ref().unwrap().issue < reissue_before => p_auth,
+        _ => None,
+    };
+
+    let mut response = Response::empty(StatusCode(status));
+    add_accepted_auth(accepted_auth, &mut response)?;
+    add_auth_cookie(issue_s_auth, &mut response, false, &jwe_codec, &details)?;
+    add_auth_cookie(issue_p_auth, &mut response, true, &jwe_codec, &details)?;
+    add_client_key(client_key.as_slice(), &mut response, &details)?;
+    Ok(response.boxed())
+}
+
+fn get_client_key(details: &RequestDetails) -> Result<Vec<u8>, ValidationFailure> {
+    let cookies = &details.cookies;
+    let key = cookies
+        .client_key
+        .as_ref()
+        .and_then(|k| BASE64_STANDARD.decode(k).ok());
+    match key {
+        None => Ok(generate_client_key()?),
+        Some(k1) if k1.len() < JWE_MIN_KEY_SIZE => Ok(generate_client_key()?),
+        Some(k1) => Ok(k1),
+    }
+}
+
+fn generate_client_key() -> Result<Vec<u8>, ValidationFailure> {
+    let mut key = [0u8; JWE_MIN_KEY_SIZE];
+    OsRng
+        .try_fill_bytes(&mut key)
+        .map_err(|_| ValidationFailure::Internal)?;
+    Ok(key.to_vec())
+}
+
+fn get_jwe_codec(
+    server_secret: &[u8],
+    client_key: &[u8],
+) -> Result<JweCodec<impl JweEncrypter, impl JweDecrypter>, ValidationFailure> {
+    let mut hmac =
+        Hmac::<Sha256>::new_from_slice(server_secret).map_err(|_| ValidationFailure::Internal)?;
+    hmac.update(client_key);
+    let derived = hmac.finalize().into_bytes();
+    Ok(JweCodec {
+        encrypter: JWE_SPEC
+            .encrypter_from_bytes(derived)
+            .map_err(|_| ValidationFailure::Internal)?,
+        decrypter: JWE_SPEC
+            .decrypter_from_bytes(derived)
+            .map_err(|_| ValidationFailure::Internal)?,
+    })
+}
+
+fn get_jwe<D: JweDecrypter>(
+    decrypter: &D,
+    raw: &Option<String>,
+    now: &DateTime<Utc>,
+) -> Option<JWEPayload> {
+    let raw = raw.as_ref()?;
+    let raw_payload = jwe::deserialize_compact(raw, decrypter).ok()?.0;
+    let payload = serde_cbor::from_slice::<JWEPayload>(&raw_payload).ok()?;
+    if payload.issue + COOKIE_DURATION < *now {
+        return None;
+    }
+    Some(payload)
+}
+
+fn get_basic_auth(encoded: &Option<String>) -> Result<Option<Auth>, ValidationFailure> {
+    let Some(encoded) = encoded else {
+        return Ok(None);
+    };
+
+    let raw = BASE64_STANDARD
+        .decode(encoded)
+        .map_err(|_| ValidationFailure::BadRequest)?;
+    let decoded = String::from_utf8(raw).map_err(|_| ValidationFailure::BadRequest)?;
+    let (username, password) = decoded
+        .split_once(':')
+        .ok_or(ValidationFailure::BadRequest)?;
+    Ok(Some(Auth {
+        username: username.to_string(),
+        password: password.to_string(),
+    }))
+}
+
+fn check_auth(auth: Option<&Auth>, request_details: &RequestDetails) -> (bool, bool) {
+    let Some(auth) = auth else {
+        return (false, false);
+    };
+
+    let service_valid = request_details
+        .service_htpasswd
+        .check(&auth.username, &auth.password);
+    let primary_valid = request_details
+        .primary_htpasswd
+        .check(&auth.username, &auth.password);
+
+    (service_valid, primary_valid)
+}
+
+fn add_accepted_auth<T: io::Read>(
+    auth: Option<&Auth>,
+    response: &mut Response<T>,
+) -> Result<bool, ValidationFailure> {
+    let Some(auth) = auth else {
+        return Ok(false);
+    };
+
+    let raw_auth = format!("{}:{}", auth.username, auth.password);
+    let encoded = BASE64_STANDARD.encode(raw_auth.as_bytes());
+    let authorization = format!("Basic {}", encoded);
+
+    let user = Header::from_bytes("X-Remote-User", auth.username.as_bytes())
+        .map_err(|_| ValidationFailure::Internal)?;
+    let auth = Header::from_bytes("X-Auth", authorization.as_bytes())
+        .map_err(|_| ValidationFailure::Internal)?;
+
+    response.add_header(user);
+    response.add_header(auth);
+    Ok(true)
+}
+
+fn add_auth_cookie<T: io::Read, E: JweEncrypter, D: JweDecrypter>(
+    auth: Option<&Auth>,
+    response: &mut Response<T>,
+    primary: bool,
+    codec: &JweCodec<E, D>,
+    request_details: &RequestDetails,
+) -> Result<bool, ValidationFailure> {
+    let Some(auth) = auth else {
+        return Ok(false);
+    };
+
+    let (cookie_key, x_header, service) = if primary {
+        (
+            AUTH_COOKIE.primary_name,
+            AUTH_COOKIE.x_primary_header,
+            PRIMARY_SERVICE,
+        )
+    } else {
+        (
+            AUTH_COOKIE.service_name,
+            AUTH_COOKIE.x_service_header,
+            request_details.service.as_str(),
+        )
+    };
+
+    let jwe = issue_jwe(&codec.encrypter, auth.to_owned(), request_details)?;
+    let expiry = request_details.timestamp + COOKIE_DURATION;
+    let cookie = make_cookie(cookie_key, &jwe, service, &expiry);
+    let header =
+        Header::from_bytes(x_header, cookie.as_bytes()).map_err(|_| ValidationFailure::Internal)?;
+
+    response.add_header(header);
+    Ok(true)
+}
+
+fn issue_jwe<E: JweEncrypter>(
+    encrypter: &E,
+    auth: Auth,
+    request_details: &RequestDetails,
+) -> Result<String, ValidationFailure> {
+    let payload = serde_cbor::to_vec(&JWEPayload {
+        issue: request_details.timestamp,
+        auth,
+    })
+    .map_err(|_| ValidationFailure::Internal)?;
+
+    let mut header = JweHeader::new();
+    header.set_token_type("JWT");
+    header.set_algorithm(JWE_ALG);
+    header.set_content_encryption(JWE_ENC);
+    jwe::serialize_compact(&payload, &header, encrypter).map_err(|_| ValidationFailure::Internal)
+}
+
+fn add_client_key<T: io::Read>(
+    key: &[u8],
+    response: &mut Response<T>,
+    request_details: &RequestDetails,
+) -> Result<(), ValidationFailure> {
+    let encoded = BASE64_STANDARD.encode(key);
+    let expiry = request_details.timestamp + COOKIE_DURATION;
+    let cookie = make_cookie(KEY_COOKIE.primary_name, &encoded, PRIMARY_SERVICE, &expiry);
+    let header = Header::from_bytes(KEY_COOKIE.x_primary_header, cookie.as_bytes())
+        .map_err(|_| ValidationFailure::Internal)?;
+    response.add_header(header);
+    Ok(())
+}
+
+fn make_cookie(key: &str, value: &str, service: &str, expiry: &DateTime<Utc>) -> String {
+    let d;
+    let domain = if service == PRIMARY_SERVICE {
+        PRIMARY_COOKIE_DOMAIN
+    } else {
+        d = format!("{service}.{PRIMARY_COOKIE_DOMAIN}");
+        d.as_str()
+    };
+
+    let expires = expiry.format("%a, %d %b %Y %H:%M:%S GMT");
+    format!("{key}={value}; Domain={domain}; Expires={expires}; HttpOnly; Path=/; SameSite=Lax; Secure")
+}
+
+MAIN
+}

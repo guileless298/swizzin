@@ -10,5 +10,15 @@ location /calibreweb {
 EOF
 
 sed '/ExecStart=/ s/$/ -i 127.0.0.1/' -i /etc/systemd/system/calibreweb.service
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /^[[:space:]]*proxy_set_header[[:space:]]+X-Script-Name/d;
+    s|^location /calibreweb \{|location /calibreweb/ {|;
+    /^[[:space:]]*proxy_pass/ s|:8083;|:8083$request_uri;|
+    ' /etc/nginx/apps/bazarr.conf
+fi
+
 systemctl daemon-reload
 systemctl try-restart calibreweb

@@ -27,3 +27,14 @@ location /rapidleech {
 }
 RAP
 fi
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei "
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    s|^location /rapidleech \{|location /rapidleech/ {\
+  set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${MASTER}\";\\
+  include /etc/nginx/snippets/subauth.conf;|
+    " /etc/nginx/apps/rapidleech.conf
+fi

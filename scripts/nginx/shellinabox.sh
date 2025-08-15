@@ -27,6 +27,18 @@ if [[ -z $(grep localhost-only /etc/default/shellinabox) ]]; then
     sed -i 's/SHELLINABOX_ARGS="/SHELLINABOX_ARGS="--localhost-only /g' /etc/default/shellinabox
 fi
 
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei "
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|:4200;|:4200\$request_uri;|;
+    /^location \/shell\/ \{/a\\
+    set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${MASTER}\";\\
+    include /etc/nginx/snippets/subauth.conf;
+    " /etc/nginx/apps/shell.conf
+fi
+
 if [[ $isactive == "active" ]]; then
     systemctl restart shellinabox
 fi

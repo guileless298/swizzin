@@ -28,7 +28,7 @@ location ^~ /$app_baseurl {
     proxy_http_version 1.1;
     proxy_set_header Upgrade \$http_upgrade;
     proxy_set_header Connection \$http_connection;
-    
+
     auth_basic "What's the password?";
     auth_basic_user_file /etc/htpasswd.d/htpasswd.${master};
 }
@@ -75,6 +75,20 @@ cat > "$app_configdir"/config.xml << ARRCONFIG
 ARRCONFIG
 
 chown -R "$user":"$user" "$app_configdir"
+
+if [[ -f /install/.subdomain.lock ]]; then
+    sed -Ei "
+    s|^([[:space:]]*)auth_basic off;|\1auth_request off;|;
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*proxy_pass/ s|:$app_port;|:$app_port\$request_uri;|
+    s|^location \^~ |location |;
+    s|^location /$app_baseurl \{|location /$app_baseurl/ {\\
+    set \$auth_htpasswd \"/etc/htpasswd.d/htpasswd.${master}\";\\
+    include /etc/nginx/snippets/subauth.conf;|
+    " /etc/nginx/apps/$app_name.conf
+    sed "s|<UrlBase>$app_baseurl</UrlBase>|<UrlBase />|" -i "$app_configdir"/config.xml
+fi
 
 # Switch app back off if it was dead before; otherwise start it
 if [[ $wasActive == "active" ]]; then

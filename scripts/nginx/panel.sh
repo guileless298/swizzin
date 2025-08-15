@@ -27,3 +27,16 @@ location / {
   proxy_set_header Connection "Upgrade";
 }
 EON
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    s|^location / \{|location /panel/ {\
+  include /etc/nginx/snippets/subauth.conf;|;
+    /^[[:space:]]*proxy_pass/ s|:8333;|:8333$request_uri;|
+    ' /etc/nginx/apps/panel.conf
+
+    sed -Ei '
+    s|^location /fancyindex \{|location /panel/fancyindex {|
+    ' /etc/nginx/apps/fancyindex.conf
+fi

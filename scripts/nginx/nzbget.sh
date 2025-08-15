@@ -40,3 +40,17 @@ NZBUPS
         systemctl restart nzbget@$u
     fi
 done
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /^location \/nzbget \{/,/^\}$/d;
+    /^[[:space:]]*auth_basic/d;
+    /^[[:space:]]*auth_basic_user_file/d;
+    /^[[:space:]]*rewrite/d;
+    /^[[:space:]]*proxy_pass/ s|\$remote_user\.nzbget;|$auth_remote_user.nzbget$request_uri;|;
+    /^location \/nzbget\/ \{/a\
+  include /etc/nginx/snippets/subauth.conf;\
+  auth_request_set $auth_remote_user $upstream_http_x_remote_user;
+    ' /etc/nginx/apps/nzbget.conf
+fi

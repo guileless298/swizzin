@@ -17,3 +17,11 @@ location /emby/ {
 }
 EMB
 fi
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    /^[[:space:]]*rewrite/d;
+    /^[[:space:]]*proxy_pass/ s|:8096/;|:8096$request_uri;|
+    ' /etc/nginx/apps/emby.conf
+fi

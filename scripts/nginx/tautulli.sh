@@ -28,6 +28,17 @@ RAD
 fi
 sed -i "s/http_root.*/http_root = \"tautulli\"/g" /opt/tautulli/config.ini
 sed -i "s/http_host.*/http_host = 127.0.0.1/g" /opt/tautulli/config.ini
+
+if [[ -f /install/.subdomain.lock ]]; then
+    # shellcheck disable=SC2016
+    sed -Ei '
+    s|^location /(plexpy|tautulli) \{|location /\1/ {|;
+    /^[[:space:]]*return/ s|/tautulli/;|$scheme://tautulli.$matched_domain$request_uri;|;
+    /^[[:space:]]*proxy_pass/ s|/tautulli;|$request_uri;|
+    ' /etc/nginx/apps/tautulli.conf
+    sed -i "s/http_root.*/http_root = \"\"/g" /opt/tautulli/config.ini
+fi
+
 if [[ $isactive == "active" ]]; then
     systemctl start tautulli
 fi
