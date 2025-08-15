@@ -48,10 +48,12 @@ if [[ -f /install/.subdomain.lock ]]; then
     /^[[:space:]]*auth_basic/d;
     /^[[:space:]]*auth_basic_user_file/d;
     /^[[:space:]]*proxy_pass/ s|\$remote_user\.flood;|$auth_remote_user.flood$request_uri;|;
+    /^[[:space:]]*alias/ s|alias[[:space:]]+([^;]+)/;|root $1;|;
     s|^location /flood/api \{|location /flood/api/ {\
     include /etc/nginx/snippets/subauth.conf;\
     auth_request_set $auth_remote_user $upstream_http_x_remote_user;|
     ' /etc/nginx/apps/flood.conf
+    sed -Ei '/ExecStart=/ s| ?--baseuri=/flood||g' /etc/systemd/system/flood@.service
 fi
 
 systemctl daemon-reload
