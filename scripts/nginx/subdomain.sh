@@ -8,12 +8,12 @@ escaped_hostname=${hostname//./\\.};
 
 cat > /etc/nginx/conf.d/subdomain.conf << CONF
 map \$host \$matched_subdomain {
-    ~^([^.]+)\\.$escaped_hostname\$ \$1;
+    ~^([^.]+)\\.(.+?\\.)?$escaped_hostname\$ \$1\$2;
     default "panel";
 }
 
 map \$host \$matched_domain {
-    ~^[^.]+\\.$escaped_hostname\$ "$hostname";
+    ~^[^.]+\\.(.+?\\.)?$escaped_hostname\$ "\$1$hostname";
     default \$host;
 }
 
